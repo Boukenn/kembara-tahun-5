@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kembara Bahasa Melayu Tahun 5 (KSSR Semakan) + Gamified Arena</title>
+    <title>Kembara Bahasa Melayu Tahun 5</title>
+    
+    <!-- Favicon & Ikon Aplikasi Rasmi Kembara BM Tahun 5 -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png">
+
     <!-- Google Fonts & Font Awesome Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -66,6 +71,29 @@
             min-height: min(680px, 92dvh);
             display: flex;
             flex-direction: column;
+        }
+
+        /* Gaya Logo Rasmi Kembara BM */
+        .brand-logo-auth {
+            width: 105px;
+            height: 105px;
+            object-fit: contain;
+            border-radius: 24px;
+            margin: 0 auto 10px;
+            display: block;
+            box-shadow: 0 10px 20px rgba(13, 148, 136, 0.25);
+            border: 3px solid #CCFBF1;
+            background: white;
+        }
+
+        .brand-logo-header {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 2px solid #CCFBF1;
+            background: white;
+            flex-shrink: 0;
         }
 
         /* Status Sambungan Cloud */
@@ -171,7 +199,7 @@
         .auth-card {
             background: var(--card-bg);
             border-radius: 24px;
-            padding: clamp(22px, 4vw, 36px) clamp(16px, 3vw, 24px);
+            padding: clamp(22px, 4vw, 34px) clamp(16px, 3vw, 24px);
             text-align: center;
             width: 100%;
             max-width: 480px;
@@ -183,14 +211,14 @@
             font-family: 'Fredoka One', cursive;
             color: var(--primary);
             font-size: clamp(1.75rem, 5vw, 2.2rem);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .avatar-selector {
             display: flex;
             justify-content: center;
             gap: 12px;
-            margin: 18px 0;
+            margin: 16px 0;
             flex-wrap: wrap;
         }
 
@@ -215,7 +243,7 @@
         }
 
         .input-group {
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
 
         .input-group input {
@@ -884,53 +912,6 @@
             font-size: 0.9rem;
         }
 
-        /* TARIK & LEPAS / KLASIK */
-        .drag-container {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .drag-chip {
-            background: var(--primary);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 30px;
-            font-weight: 800;
-            font-size: 1.15rem;
-            cursor: grab;
-            box-shadow: 0 4px 0 var(--primary-hover);
-        }
-
-        .drop-zones-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-            gap: 12px;
-            width: 100%;
-        }
-
-        .drop-zone {
-            background: #F1F5F9;
-            border: 3px dashed #94A3B8;
-            border-radius: 18px;
-            padding: 14px;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .drop-zone:hover, .drop-zone.drag-over {
-            background: #CCFBF1;
-            border-color: var(--primary);
-            transform: scale(1.03);
-        }
-
         .feedback-banner {
             margin-top: 12px;
             padding: 11px 14px;
@@ -1207,6 +1188,10 @@
                 padding: 12px;
                 min-height: calc(100dvh - 12px);
             }
+            .brand-logo-auth {
+                width: 86px;
+                height: 86px;
+            }
             .header-bar {
                 padding: 8px 12px;
                 margin-bottom: 12px;
@@ -1271,10 +1256,11 @@
         <!-- Header Bar -->
         <div id="main-header" class="header-bar" style="display: none;">
             <div class="user-profile-badge">
+                <img src="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png" alt="Logo Kembara BM" class="brand-logo-header">
                 <div class="avatar-circle" id="user-avatar-display"><i class="fa-solid fa-user-astronaut"></i></div>
                 <div>
                     <div id="user-name-display" style="color: var(--primary); font-size: 1.05rem;">Murid BM 5</div>
-                    <div style="font-size: 0.72rem; color: #64748B;">Darjah 5 KSSR Semakan</div>
+                    <div style="font-size: 0.72rem; color: #64748B;">Kembara BM • Darjah 5 KSSR</div>
                 </div>
             </div>
             <div class="stats-group">
@@ -1295,8 +1281,9 @@
                 <div id="firebase-status-badge" class="cloud-status-pill">
                     <i class="fa-solid fa-spinner fa-spin"></i> Menyambung ke Firebase...
                 </div>
-                <br>
-                <i class="fa-solid fa-award" style="font-size: 3.2rem; color: var(--primary); margin-bottom: 8px;"></i>
+                
+                <img src="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png" alt="Logo Kembara BM Tahun 5" class="brand-logo-auth">
+                
                 <h1>Kembara BM 5</h1>
                 <p style="color: #64748B; font-weight: 700; font-size: 0.95rem; margin-bottom: 14px;">Edisi Gamifikasi Tahun 5 KSSR • Daftar profil anda!</p>
                 
@@ -1325,7 +1312,7 @@
         <!-- 0B. SKRIN LOG MASUK ADMIN -->
         <div id="screen-admin-login" class="screen">
             <div class="auth-card">
-                <i class="fa-solid fa-shield-halved" style="font-size: 3.2rem; color: var(--primary); margin-bottom: 8px;"></i>
+                <img src="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png" alt="Logo Kembara BM Tahun 5" class="brand-logo-auth" style="width: 82px; height: 82px;">
                 <h1 style="font-size: 1.8rem;">Log Masuk Admin</h1>
                 <p style="color: #64748B; font-weight: 700; margin-bottom: 16px;">Akses terhad kepada Pentadbir Sahaja</p>
                 
@@ -1428,8 +1415,9 @@
             <div class="game-board" style="justify-content: flex-start; gap: 12px;">
                 <div class="game-header">
                     <button class="btn-back" onclick="exitAdminPanel()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-                    <span style="font-family:'Fredoka One'; color:var(--primary); font-size: 1.05rem;">
-                        <i class="fa-solid fa-sliders"></i> Admin Tahun 5 (<span id="active-admin-badge">Admin</span>)
+                    <span style="font-family:'Fredoka One'; color:var(--primary); font-size: 1.05rem; display:inline-flex; align-items:center; gap:8px;">
+                        <img src="https://raw.githubusercontent.com/Boukenn/kembara-tahun-5/68338c0a551dc80b3a98da0deb78eb65d51e1936/kembara_bm_logo_512.png" alt="Logo" style="width:26px; height:26px; border-radius:6px;">
+                        Admin Tahun 5 (<span id="active-admin-badge">Admin</span>)
                     </span>
                     <div style="display: flex; gap: 6px; align-items: center;">
                         <button class="btn-sm btn-danger-sm" onclick="resetDatabaseToDefault()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
@@ -2306,7 +2294,6 @@
             const weaponsGrid = document.createElement('div');
             weaponsGrid.className = 'battle-weapons-grid';
 
-            // Sokong soalan jenis drag_drop atau mcq dalam mod Monster Battle
             let choices = [];
             if (qData.type === 'drag_drop' && Array.isArray(qData.categories)) {
                 choices = shuffleArray(qData.categories).map(cat => ({
@@ -2362,7 +2349,6 @@
         let bomberState = null;
 
         function renderBomberMaze(qData, area) {
-            // Grid 5x5: 0=lantai, 1=dinding batu, 2=peti kayu (boleh diletupkan), 3=pintu soalan
             const layout = [
                 [0, 0, 1, 0, 0],
                 [0, 1, 2, 0, 1],
@@ -2429,7 +2415,6 @@
                         cell.innerHTML = `<i class="fa-solid fa-door-open"></i>`;
                     }
 
-                    // Klik terus pada petak bersebelahan atau peti untuk bergerak/bom (mesra sentuhan mobile)
                     cell.onclick = () => {
                         const dx = x - bomberState.px;
                         const dy = y - bomberState.py;
@@ -2498,7 +2483,6 @@
             setTimeout(() => {
                 if (bomberState) {
                     if (!blastedAny) {
-                        // Jika tiada peti bersebelahan, buka peti terdekat secara automatik untuk kelancaran murid
                         for (let y = 0; y < 5; y++) {
                             for (let x = 0; x < 5; x++) {
                                 if (bomberState.grid[y][x] === 2) {
@@ -2561,7 +2545,6 @@
             const prefix = affixParts[0] || '';
             const suffix = affixParts[1] || '';
 
-            // Bina 9 kepingan (8 kepingan + 1 ruang kosong) yang hampir tersusun supaya seronok & pantas diselesaikan murid
             const solvedLabels = [
                 { num: 1, text: prefix || 'Imbuhan', highlight: true },
                 { num: 2, text: rootWord.toUpperCase(), highlight: true },
@@ -2571,10 +2554,9 @@
                 { num: 6, text: 'APITAN', highlight: false },
                 { num: 7, text: 'TAHUN 5', highlight: false },
                 { num: 8, text: 'KSSR', highlight: false },
-                { num: 0, text: '', highlight: false } // Ruang kosong
+                { num: 0, text: '', highlight: false }
             ];
 
-            // Lakukan beberapa langkah gelongsor sah dari keadaan tersusun supaya sentiasa boleh diselesaikan
             slidingTiles = solvedLabels.map(t => ({ ...t }));
             let emptyIdx = 8;
             const validNeighbors = {
