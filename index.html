@@ -1,0 +1,3317 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kembara Bahasa Melayu Tahun 5 (KSSR Semakan) + Gamified Arena</title>
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase App & Firestore SDK (Compat Version untuk HTML Tunggal) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #0D9488;
+            --primary-hover: #0F766E;
+            --secondary: #0284C7;
+            --accent-yellow: #F59E0B;
+            --accent-green: #10B981;
+            --accent-red: #EF4444;
+            --accent-purple: #8B5CF6;
+            --bg-gradient: linear-gradient(135deg, #064E3B 0%, #0F172A 50%, #1E1B4B 100%);
+            --card-bg: rgba(255, 255, 255, 0.97);
+            --text-dark: #1E293B;
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input, select, textarea {
+            user-select: text !important;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-dark);
+            overflow-x: hidden;
+            padding: clamp(8px, 2vw, 20px);
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 1020px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: clamp(18px, 3vw, 28px);
+            box-shadow: var(--shadow-lg);
+            padding: clamp(12px, 2.5vw, 24px);
+            position: relative;
+            min-height: min(680px, 92dvh);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Sambungan Cloud */
+        .cloud-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #FEF3C7;
+            color: #B45309;
+            margin-bottom: 12px;
+        }
+
+        .cloud-status-pill.connected {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .cloud-status-pill.offline {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Bar Header Responsif */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 10px 18px;
+            border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .user-profile-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+        }
+
+        .avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: #F1F5F9;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-dark);
+        }
+
+        .stat-badge.score i { color: var(--accent-yellow); }
+        .stat-badge.streak i { color: var(--accent-red); }
+
+        /* Skrin Management */
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            animation: fadeIn 0.35s ease-out forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 1. Skrin Pendaftaran Gaya Quizizz */
+        .auth-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: clamp(22px, 4vw, 36px) clamp(16px, 3vw, 24px);
+            text-align: center;
+            width: 100%;
+            max-width: 480px;
+            margin: auto;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .auth-card h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--primary);
+            font-size: clamp(1.75rem, 5vw, 2.2rem);
+            margin-bottom: 8px;
+        }
+
+        .avatar-selector {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 18px 0;
+            flex-wrap: wrap;
+        }
+
+        .avatar-option {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: 0.2s;
+        }
+
+        .avatar-option.selected {
+            border-color: var(--primary);
+            background: #CCFBF1;
+            transform: scale(1.12);
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 13px 18px;
+            border: 2px solid #CBD5E1;
+            border-radius: 16px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-align: center;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
+        }
+
+        /* Grid Modul & Fasa Responsif */
+        .welcome-hero {
+            text-align: center;
+            color: white;
+            margin-bottom: 18px;
+        }
+
+        .welcome-hero h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+            color: #FDE047;
+        }
+
+        .welcome-hero p {
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            opacity: 0.92;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+            gap: 14px;
+        }
+
+        .menu-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 18px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 3px solid transparent;
+            box-shadow: 0 7px 0 rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .menu-card.c-1 { border-color: var(--accent-yellow); }
+        .menu-card.c-2 { border-color: var(--secondary); }
+        .menu-card.c-3 { border-color: var(--accent-purple); }
+        .menu-card.c-4 { border-color: var(--accent-green); }
+        .menu-card.c-5 { border-color: var(--accent-red); }
+
+        .menu-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .c-1 .menu-icon { background: var(--accent-yellow); }
+        .c-2 .menu-icon { background: var(--secondary); }
+        .c-3 .menu-icon { background: var(--accent-purple); }
+        .c-4 .menu-icon { background: var(--accent-green); }
+        .c-5 .menu-icon { background: var(--accent-red); }
+
+        .mode-pill {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: #F1F5F9;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Grid Fasa Pembelajaran */
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .phase-card {
+            background: white;
+            border-radius: 16px;
+            padding: 14px 10px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #CBD5E1;
+            border: 2px solid #E2E8F0;
+            position: relative;
+            transition: 0.2s;
+        }
+
+        .phase-card:hover:not(.locked) {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .phase-card.locked {
+            background: #F1F5F9;
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .phase-card .phase-number {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .phase-card.locked .phase-number {
+            color: #94A3B8;
+        }
+
+        .phase-card .status-icon {
+            font-size: 1.15rem;
+            margin-top: 6px;
+        }
+
+        /* Game Board Common */
+        .game-board {
+            background: var(--card-bg);
+            border-radius: 22px;
+            padding: clamp(14px, 2.5vw, 24px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            min-height: 460px;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-back {
+            background: #E2E8F0;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #475569;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back:hover {
+            background: #CBD5E1;
+        }
+
+        .instruction-box {
+            text-align: center;
+            font-size: clamp(0.98rem, 2.5vw, 1.15rem);
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 14px;
+            background: #F8FAFC;
+            padding: 12px 16px;
+            border-radius: 16px;
+            border: 2px dashed #CBD5E1;
+            line-height: 1.45;
+        }
+
+        /* =========================================================
+           KONSEP 1: MONSTER BATTLE ARENA (MODUL 1 - TATABAHASA)
+           ========================================================= */
+        .battle-arena {
+            background: linear-gradient(180deg, #1E1B4B 0%, #312E81 65%, #065F46 65%, #047857 100%);
+            border-radius: 20px;
+            padding: 16px;
+            color: white;
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid #4338CA;
+            box-shadow: inset 0 -6px 0 rgba(0,0,0,0.25);
+        }
+
+        .battle-fighters {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 12px;
+            min-height: 125px;
+            padding: 0 10px;
+        }
+
+        .fighter-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 44%;
+            max-width: 190px;
+            position: relative;
+        }
+
+        .hp-bar-wrap {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 8px;
+        }
+
+        .hp-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0 4px 2px;
+        }
+
+        .hp-track {
+            height: 9px;
+            background: #334155;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .hp-fill {
+            height: 100%;
+            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .hp-fill.hero { background: linear-gradient(90deg, #10B981, #34D399); }
+        .hp-fill.monster { background: linear-gradient(90deg, #EF4444, #F97316); }
+
+        .fighter-sprite {
+            font-size: clamp(2.4rem, 6vw, 3.3rem);
+            filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45));
+            transition: transform 0.25s ease;
+        }
+
+        .hero-attack-anim {
+            animation: heroLunge 0.55s ease;
+        }
+
+        .monster-hit-anim {
+            animation: entityShake 0.45s ease;
+            color: #FCA5A5;
+        }
+
+        .hero-hit-anim {
+            animation: entityShake 0.45s ease;
+            color: #FCA5A5;
+        }
+
+        @keyframes heroLunge {
+            0% { transform: translateX(0) scale(1); }
+            45% { transform: translateX(65px) scale(1.25) rotate(12deg); }
+            100% { transform: translateX(0) scale(1); }
+        }
+
+        @keyframes entityShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-8deg); }
+            40% { transform: translateX(10px) rotate(8deg); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+
+        .battle-projectile {
+            position: absolute;
+            top: 52%;
+            left: 28%;
+            font-size: 1.8rem;
+            color: #FDE047;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .fire-beam {
+            animation: shootRight 0.5s ease-out forwards;
+        }
+
+        @keyframes shootRight {
+            0% { opacity: 1; transform: translateX(0) scale(0.8); }
+            80% { opacity: 1; transform: translateX(180px) scale(1.4); }
+            100% { opacity: 0; transform: translateX(220px) scale(1.8); }
+        }
+
+        .battle-word-banner {
+            background: rgba(255,255,255,0.14);
+            border: 2px solid #FDE047;
+            border-radius: 14px;
+            padding: 8px 16px;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 800;
+            font-size: 1.05rem;
+        }
+
+        .battle-weapons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .weapon-btn {
+            background: white;
+            border: 2px solid #CBD5E1;
+            border-bottom: 5px solid #94A3B8;
+            border-radius: 16px;
+            padding: 13px 12px;
+            font-weight: 800;
+            font-size: 0.98rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: 0.15s;
+        }
+
+        .weapon-btn:hover {
+            border-color: var(--primary);
+            background: #F0FDFA;
+            transform: translateY(-2px);
+        }
+
+        .weapon-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+
+        /* =========================================================
+           KONSEP 2: BOMBER MAZE ARENA (MODUL 2 - PERIBAHASA)
+           ========================================================= */
+        .bomber-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bomber-top-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            background: #FEF3C7;
+            border: 2px solid #F59E0B;
+            padding: 8px 14px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            color: #92400E;
+        }
+
+        .maze-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            background: #1E293B;
+            padding: 10px;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 340px;
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+        }
+
+        .maze-cell {
+            background: #334155;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.25rem, 4vw, 1.65rem);
+            position: relative;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .maze-cell.floor { background: #E2E8F0; }
+        .maze-cell.wall { background: #0F172A; box-shadow: inset 0 2px 4px rgba(255,255,255,0.1); cursor: not-allowed; }
+        .maze-cell.crate { background: #D97706; color: #FEF3C7; box-shadow: inset 0 -3px 0 #92400E; }
+        .maze-cell.goal { background: #D1FAE5; border: 2px dashed #10B981; color: #059669; }
+        .maze-cell.explosion { background: #EF4444 !important; color: #FEF08A; animation: boomFlash 0.45s ease; }
+
+        @keyframes boomFlash {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+
+        .bomber-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 52px);
+            grid-template-rows: repeat(2, 46px);
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .dpad-btn {
+            background: #F1F5F9;
+            border: 2px solid #CBD5E1;
+            border-bottom: 4px solid #94A3B8;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dpad-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+
+        .dpad-btn.bomb-btn {
+            background: #FEE2E2;
+            border-color: #EF4444;
+            border-bottom-color: #B91C1C;
+            color: #DC2626;
+        }
+
+        /* Modal Soalan dalam Bomber Maze */
+        .maze-quiz-panel {
+            width: 100%;
+            background: #F8FAFC;
+            border: 2px solid var(--secondary);
+            border-radius: 18px;
+            padding: 14px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* =========================================================
+           KONSEP 3: SLIDING PUZZLE ARENA (MODUL 3 - IMBUHAN APITAN)
+           ========================================================= */
+        .sliding-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .sliding-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            background: #311042;
+            padding: 10px;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 310px;
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 10px 20px rgba(88, 28, 135, 0.25);
+        }
+
+        .slide-tile {
+            background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(1rem, 3.2vw, 1.25rem);
+            cursor: pointer;
+            box-shadow: 0 4px 0 #4C1D95;
+            transition: transform 0.15s ease, background 0.2s;
+            padding: 4px;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .slide-tile:hover:not(.empty) {
+            filter: brightness(1.08);
+            transform: scale(1.03);
+        }
+
+        .slide-tile.highlight-piece {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            box-shadow: 0 4px 0 #92400E;
+        }
+
+        .slide-tile.empty {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
+            cursor: default;
+        }
+
+        .slide-tile-num {
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 800;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+
+        /* =========================================================
+           KONSEP 4: SUPER JUMPER ARENA (MODUL 4 - SINTAKSIS & EJAAN)
+           ========================================================= */
+        .jumper-arena {
+            background: linear-gradient(180deg, #0284C7 0%, #38BDF8 65%, #BAE6FD 100%);
+            border-radius: 20px;
+            padding: 14px;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid #0369A1;
+            margin-bottom: 14px;
+            min-height: 175px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .jumper-sky-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            z-index: 2;
+        }
+
+        .jumper-platforms-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 115px;
+            padding: 0 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .sky-platform {
+            width: 28%;
+            max-width: 130px;
+            background: #10B981;
+            border-top: 6px solid #A7F3D0;
+            border-bottom: 6px solid #047857;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .sky-platform.p-low { height: 34px; }
+        .sky-platform.p-mid { height: 58px; }
+        .sky-platform.p-high { height: 82px; }
+
+        .jumper-hero {
+            position: absolute;
+            bottom: 100%;
+            font-size: clamp(2rem, 5vw, 2.6rem);
+            color: #FDE047;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.35));
+            transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .hero-super-jump {
+            animation: superJumpArc 0.65s ease;
+        }
+
+        @keyframes superJumpArc {
+            0% { transform: translateY(0) scale(1); }
+            45% { transform: translateY(-55px) scale(1.2) rotate(-10deg); }
+            100% { transform: translateY(0) scale(1); }
+        }
+
+        .hero-slip-anim {
+            animation: heroSlip 0.55s ease;
+        }
+
+        @keyframes heroSlip {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(22px) rotate(25deg); color: #FCA5A5; }
+        }
+
+        /* OPTIONS GRID (Aneka Pilihan) */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #E2E8F0;
+            border-bottom: 5px solid #CBD5E1;
+            padding: 13px 14px;
+            border-radius: 15px;
+            font-size: clamp(0.92rem, 2.3vw, 1.02rem);
+            font-weight: 700;
+            color: var(--text-dark);
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.15s ease;
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background: #F0FDFA;
+            transform: translateY(-2px);
+        }
+
+        .option-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+
+        .option-btn .opt-index {
+            background: #E2E8F0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fredoka One', cursive;
+            flex-shrink: 0;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        /* TARIK & LEPAS / KLASIK */
+        .drag-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .drag-chip {
+            background: var(--primary);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1.15rem;
+            cursor: grab;
+            box-shadow: 0 4px 0 var(--primary-hover);
+        }
+
+        .drop-zones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+            gap: 12px;
+            width: 100%;
+        }
+
+        .drop-zone {
+            background: #F1F5F9;
+            border: 3px dashed #94A3B8;
+            border-radius: 18px;
+            padding: 14px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            background: #CCFBF1;
+            border-color: var(--primary);
+            transform: scale(1.03);
+        }
+
+        .feedback-banner {
+            margin-top: 12px;
+            padding: 11px 14px;
+            border-radius: 14px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .feedback-banner.correct {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 2px solid #10B981;
+            display: block;
+        }
+
+        .feedback-banner.wrong {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 2px solid #EF4444;
+            display: block;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background: #E2E8F0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-green);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .btn-action {
+            background: var(--accent-green);
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.1rem;
+            padding: 12px 26px;
+            border-radius: 40px;
+            border: none;
+            box-shadow: 0 6px 0 #047857;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.15s;
+        }
+
+        .btn-action:active {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #047857;
+        }
+
+        /* Result Screen */
+        .result-card {
+            text-align: center;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            padding: 28px 10px;
+            margin: auto;
+        }
+
+        .score-circle {
+            width: 145px;
+            height: 145px;
+            border-radius: 50%;
+            background: white;
+            color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 6px solid var(--accent-yellow);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .score-circle .number {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.8rem;
+            line-height: 1;
+        }
+
+        /* ==========================================
+           ADMIN PANEL STYLES
+           ========================================== */
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            border-bottom: 2px solid #E2E8F0;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-tab-btn {
+            background: #F1F5F9;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #475569;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .admin-tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .admin-section {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .admin-section.active {
+            display: flex;
+        }
+
+        .admin-form-card {
+            background: #F8FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .admin-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .admin-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .admin-field label {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #475569;
+        }
+
+        .admin-field input, .admin-field select, .admin-field textarea {
+            padding: 9px 12px;
+            border-radius: 12px;
+            border: 2px solid #CBD5E1;
+            font-size: 0.92rem;
+            font-weight: 600;
+            outline: none;
+            background: white;
+        }
+
+        .admin-list-container {
+            max-height: 260px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 4px;
+        }
+
+        .admin-item-card {
+            background: white;
+            border: 2px solid #E2E8F0;
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-item-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: #CCFBF1;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-sm {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-edit { background: #FEF3C7; color: #D97706; }
+        .btn-delete { background: #FEE2E2; color: #DC2626; }
+        .btn-primary-sm { background: var(--primary); color: white; padding: 9px 16px; font-size: 0.88rem; }
+        .btn-danger-sm { background: var(--accent-red); color: white; padding: 8px 12px; font-size: 0.82rem; }
+        .btn-success-sm { background: var(--accent-green); color: white; padding: 9px 16px; font-size: 0.88rem; }
+
+        /* Custom Modal Notification */
+        .toast-msg {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            left: auto;
+            max-width: calc(100vw - 36px);
+            background: #1E293B;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            border-left: 5px solid var(--accent-green);
+        }
+
+        /* =========================================================
+           MEDIA QUERIES RESPONSIF (TABLET & MOBILE)
+           ========================================================= */
+        @media (max-width: 768px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .battle-fighters {
+                min-height: 105px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 6px;
+                align-items: flex-start;
+            }
+            #app-container {
+                border-radius: 18px;
+                padding: 12px;
+                min-height: calc(100dvh - 12px);
+            }
+            .header-bar {
+                padding: 8px 12px;
+                margin-bottom: 12px;
+            }
+            .avatar-circle {
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+            }
+            .stat-badge {
+                padding: 5px 10px;
+                font-size: 0.82rem;
+            }
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .menu-card {
+                flex-direction: row;
+                text-align: left;
+                padding: 14px;
+                justify-content: flex-start;
+            }
+            .menu-card-body {
+                flex: 1;
+            }
+            .phase-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .battle-weapons-grid {
+                grid-template-columns: 1fr;
+            }
+            .weapon-btn {
+                flex-direction: row;
+                justify-content: center;
+            }
+            .maze-grid {
+                max-width: 270px;
+                padding: 8px;
+            }
+            .sliding-board {
+                max-width: 260px;
+                gap: 6px;
+            }
+            .toast-msg {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-notification" class="toast-msg">
+        <i class="fa-solid fa-circle-check" style="color: var(--accent-green);"></i>
+        <span id="toast-text">Perubahan berjaya disimpan!</span>
+    </div>
+
+    <div id="app-container">
+        <!-- Header Bar -->
+        <div id="main-header" class="header-bar" style="display: none;">
+            <div class="user-profile-badge">
+                <div class="avatar-circle" id="user-avatar-display"><i class="fa-solid fa-user-astronaut"></i></div>
+                <div>
+                    <div id="user-name-display" style="color: var(--primary); font-size: 1.05rem;">Murid BM 5</div>
+                    <div style="font-size: 0.72rem; color: #64748B;">Darjah 5 KSSR Semakan</div>
+                </div>
+            </div>
+            <div class="stats-group">
+                <div class="stat-badge score">
+                    <i class="fa-solid fa-star"></i>
+                    <span id="score-val">0</span>
+                </div>
+                <div class="stat-badge streak">
+                    <i class="fa-solid fa-fire"></i>
+                    <span id="streak-val">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 0. SKRIN PENDAFTARAN (QUIZIZZ STYLE) -->
+        <div id="screen-auth" class="screen active">
+            <div class="auth-card">
+                <div id="firebase-status-badge" class="cloud-status-pill">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Menyambung ke Firebase...
+                </div>
+                <br>
+                <i class="fa-solid fa-award" style="font-size: 3.2rem; color: var(--primary); margin-bottom: 8px;"></i>
+                <h1>Kembara BM 5</h1>
+                <p style="color: #64748B; font-weight: 700; font-size: 0.95rem; margin-bottom: 14px;">Edisi Gamifikasi Tahun 5 KSSR • Daftar profil anda!</p>
+                
+                <div class="input-group">
+                    <input type="text" id="player-name-input" placeholder="Masukkan Nama Anda..." maxlength="15">
+                </div>
+
+                <div style="font-weight: 800; color: #475569; font-size: 0.9rem;">Pilih Avatar Utama:</div>
+                <div class="avatar-selector">
+                    <div class="avatar-option selected" data-icon="fa-user-astronaut" onclick="selectAvatar(this)"><i class="fa-solid fa-user-astronaut"></i></div>
+                    <div class="avatar-option" data-icon="fa-user-ninja" onclick="selectAvatar(this)"><i class="fa-solid fa-user-ninja"></i></div>
+                    <div class="avatar-option" data-icon="fa-dragon" onclick="selectAvatar(this)"><i class="fa-solid fa-dragon"></i></div>
+                    <div class="avatar-option" data-icon="fa-brain" onclick="selectAvatar(this)"><i class="fa-solid fa-brain"></i></div>
+                </div>
+
+                <button class="btn-action" style="width: 100%; justify-content: center; margin-bottom: 12px;" onclick="registerUser()">
+                    Mula Kembara Tahun 5 <i class="fa-solid fa-rocket"></i>
+                </button>
+
+                <button class="btn-back" style="width: 100%; justify-content: center;" onclick="openAdminPanel()">
+                    <i class="fa-solid fa-sliders"></i> Masuk ke Admin Panel (Guru)
+                </button>
+            </div>
+        </div>
+
+        <!-- 0B. SKRIN LOG MASUK ADMIN -->
+        <div id="screen-admin-login" class="screen">
+            <div class="auth-card">
+                <i class="fa-solid fa-shield-halved" style="font-size: 3.2rem; color: var(--primary); margin-bottom: 8px;"></i>
+                <h1 style="font-size: 1.8rem;">Log Masuk Admin</h1>
+                <p style="color: #64748B; font-weight: 700; margin-bottom: 16px;">Akses terhad kepada Pentadbir Sahaja</p>
+                
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <input type="text" id="admin-login-username" placeholder="Nama Pengguna (Username)" autocomplete="off">
+                </div>
+
+                <div class="input-group" style="margin-bottom: 16px;">
+                    <input type="password" id="admin-login-password" placeholder="Kata Laluan (Password)" onkeydown="if(event.key==='Enter') verifyAdminLogin()">
+                </div>
+
+                <button class="btn-action" style="width: 100%; justify-content: center; margin-bottom: 12px; background: var(--primary); box-shadow: 0 6px 0 var(--primary-hover);" onclick="verifyAdminLogin()">
+                    <i class="fa-solid fa-right-to-bracket"></i> Log Masuk Panel
+                </button>
+
+                <button class="btn-back" style="width: 100%; justify-content: center;" onclick="exitAdminPanel()">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. SKRIN MENU MODUL (DINAMIK) -->
+        <div id="screen-menu" class="screen">
+            <div class="welcome-hero">
+                <h1>Arena Pembelajaran Tahun 5</h1>
+                <p>Pilih modul dengan cabaran permainan interaktif yang unik!</p>
+            </div>
+
+            <div id="dynamic-menu-grid" class="menu-grid">
+                <!-- Modul Dijana Secara Dinamik -->
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-back" style="background: rgba(255, 255, 255, 0.94); color: var(--primary); padding: 10px 16px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);" onclick="backToLogin()">
+                    <i class="fa-solid fa-right-from-bracket"></i> Kembali ke Log Masuk
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. SKRIN PILIHAN FASA (DINAMIK) -->
+        <div id="screen-phases" class="screen">
+            <div class="game-board">
+                <div>
+                    <div class="game-header">
+                        <button class="btn-back" onclick="renderModuleMenu(); showScreen('screen-menu');"><i class="fa-solid fa-arrow-left"></i> Modul</button>
+                        <span id="module-title-tag" style="font-family:'Fredoka One'; color:var(--primary); font-size: 0.95rem;">Pilihan Fasa</span>
+                    </div>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <h2 style="font-family:'Fredoka One'; color:var(--primary); font-size: clamp(1.3rem, 4vw, 1.75rem);">Pilih Fasa Pembelajaran</h2>
+                        <p id="module-game-mode-desc" style="font-size:0.88rem; color:#64748B; font-weight:700;">Dapatkan minimum 70% markah untuk menyahkunci fasa seterusnya!</p>
+                    </div>
+                </div>
+
+                <div id="phase-container" class="phase-grid">
+                    <!-- Fasa Dijana Secara Dinamik -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SKRIN PERMAINAN (GAME BOARD) -->
+        <div id="screen-game" class="screen">
+            <div class="game-board">
+                <div>
+                    <div class="game-header">
+                        <button class="btn-back" onclick="openPhaseSelection(currentModuleId)"><i class="fa-solid fa-arrow-left"></i> Fasa</button>
+                        <span id="game-mode-badge" style="font-size: 0.8rem; font-weight: 800; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 10px;">Arena</span>
+                        <span id="game-phase-tag" style="font-family:'Fredoka One'; background:#CCFBF1; color:var(--primary); padding:4px 12px; border-radius:10px; font-size: 0.9rem;">Fasa 1</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progress-fill" class="progress-bar-fill"></div>
+                    </div>
+                </div>
+
+                <div id="instruction-text" class="instruction-box">Soalan...</div>
+
+                <div id="game-interactive-area" style="flex:1; display:flex; flex-direction:column; justify-content:center;"></div>
+
+                <div id="feedback-banner" class="feedback-banner"></div>
+            </div>
+        </div>
+
+        <!-- 4. SKRIN KEPUTUSAN FASA -->
+        <div id="screen-result" class="screen">
+            <div class="result-card">
+                <h2 id="result-title" style="font-family:'Fredoka One'; color:#FDE047; font-size:clamp(1.8rem, 5vw, 2.4rem);">Fasa Selesai! 🎉</h2>
+                <div class="score-circle">
+                    <span id="final-score" class="number">0%</span>
+                    <span style="font-size:0.75rem; font-weight:800; color:#64748B; margin-top: 4px;">MARKAH FASA</span>
+                </div>
+                <p id="result-message" style="font-weight:700; font-size:1.05rem; max-width:500px; text-align:center; color:#FDE047;"></p>
+
+                <button class="btn-action" onclick="openPhaseSelection(currentModuleId)">
+                    <i class="fa-solid fa-list-check"></i> Seterusnya / Pilih Fasa
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. SKRIN ADMIN PANEL (PENGURUSAN MODUL, FASA & SOALAN) -->
+        <div id="screen-admin" class="screen">
+            <div class="game-board" style="justify-content: flex-start; gap: 12px;">
+                <div class="game-header">
+                    <button class="btn-back" onclick="exitAdminPanel()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                    <span style="font-family:'Fredoka One'; color:var(--primary); font-size: 1.05rem;">
+                        <i class="fa-solid fa-sliders"></i> Admin Tahun 5 (<span id="active-admin-badge">Admin</span>)
+                    </span>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-sm btn-danger-sm" onclick="resetDatabaseToDefault()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                        <button class="btn-sm" style="background:#334155; color:white; padding:8px 12px;" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+                    </div>
+                </div>
+
+                <!-- Tab Navigasi Admin -->
+                <div class="admin-tabs">
+                    <button class="admin-tab-btn active" onclick="switchAdminTab('questions', this)"><i class="fa-solid fa-circle-question"></i> Urus Soalan</button>
+                    <button class="admin-tab-btn" onclick="switchAdminTab('phases', this)"><i class="fa-solid fa-layer-group"></i> Urus Fasa</button>
+                    <button class="admin-tab-btn" onclick="switchAdminTab('modules', this)"><i class="fa-solid fa-cubes"></i> Urus Modul</button>
+                    <button class="admin-tab-btn" onclick="switchAdminTab('firebase', this)"><i class="fa-solid fa-cloud"></i> Tetapan Firebase</button>
+                </div>
+
+                <!-- TAB 1: URUS SOALAN -->
+                <div id="admin-tab-questions" class="admin-section active">
+                    <div class="admin-row">
+                        <div class="admin-field">
+                            <label>Pilih Modul:</label>
+                            <select id="admin-q-module" onchange="onAdminModuleChange()"></select>
+                        </div>
+                        <div class="admin-field">
+                            <label>Pilih Fasa:</label>
+                            <select id="admin-q-phase" onchange="renderAdminQuestionsList()"></select>
+                        </div>
+                    </div>
+
+                    <!-- Borang Tambah / Edit Soalan -->
+                    <div class="admin-form-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong id="admin-q-form-title" style="color:var(--primary);">+ Tambah Soalan Baharu</strong>
+                            <button id="admin-q-cancel-btn" class="btn-sm btn-back" style="display:none;" onclick="resetQuestionForm()">Batal Edit</button>
+                        </div>
+                        
+                        <input type="hidden" id="admin-q-edit-index" value="-1">
+
+                        <div class="admin-row">
+                            <div class="admin-field">
+                                <label>Jenis Data Soalan:</label>
+                                <select id="admin-q-type" onchange="toggleQuestionTypeFields()">
+                                    <option value="mcq">Aneka Pilihan (Bomber Maze / Super Jumper)</option>
+                                    <option value="drag_drop">Pengelasan Kata (Monster Battle)</option>
+                                    <option value="affix_builder">Pembina Imbuhan (Sliding Puzzle)</option>
+                                </select>
+                            </div>
+                            <div class="admin-field">
+                                <label>Teks Soalan / Arahan:</label>
+                                <input type="text" id="admin-q-text" placeholder="Contoh: Apakah maksud peribahasa 'Bagai aur dengan tebing'?">
+                            </div>
+                        </div>
+
+                        <!-- Medan Khusus MCQ -->
+                        <div id="fields-mcq" class="admin-row">
+                            <div class="admin-field">
+                                <label>Jawapan Betul:</label>
+                                <input type="text" id="mcq-correct" placeholder="Pilihan jawapan tepat">
+                            </div>
+                            <div class="admin-field">
+                                <label>Pilihan Salah 1:</label>
+                                <input type="text" id="mcq-wrong1" placeholder="Pilihan salah 1">
+                            </div>
+                            <div class="admin-field">
+                                <label>Pilihan Salah 2:</label>
+                                <input type="text" id="mcq-wrong2" placeholder="Pilihan salah 2">
+                            </div>
+                            <div class="admin-field">
+                                <label>Pilihan Salah 3:</label>
+                                <input type="text" id="mcq-wrong3" placeholder="Pilihan salah 3">
+                            </div>
+                        </div>
+
+                        <!-- Medan Khusus Drag & Drop / Monster Battle -->
+                        <div id="fields-drag" class="admin-row" style="display:none;">
+                            <div class="admin-field">
+                                <label>Perkataan Untuk Dikelaskan:</label>
+                                <input type="text" id="drag-word" placeholder="Contoh: gotong-royong">
+                            </div>
+                            <div class="admin-field">
+                                <label>Kategori Jawapan Betul:</label>
+                                <input type="text" id="drag-correct-cat" placeholder="Contoh: Kata Ganda Berentak">
+                            </div>
+                            <div class="admin-field">
+                                <label>Semua Pilihan Kategori (Asingkan dengan koma):</label>
+                                <input type="text" id="drag-all-cats" placeholder="Kata Ganda Penuh, Kata Ganda Separa, Kata Ganda Berentak">
+                            </div>
+                        </div>
+
+                        <!-- Medan Khusus Imbuhan / Sliding Puzzle -->
+                        <div id="fields-affix" class="admin-row" style="display:none;">
+                            <div class="admin-field">
+                                <label>Kata Dasar:</label>
+                                <input type="text" id="affix-root" placeholder="Contoh: bersih">
+                            </div>
+                            <div class="admin-field">
+                                <label>Imbuhan Betul:</label>
+                                <input type="text" id="affix-correct" placeholder="Contoh: mem...kan">
+                            </div>
+                            <div class="admin-field">
+                                <label>Pilihan Imbuhan (Asingkan dengan koma):</label>
+                                <input type="text" id="affix-options" placeholder="mem...kan, ber...an, ter...i, di...kan">
+                            </div>
+                        </div>
+
+                        <div style="text-align: right;">
+                            <button class="btn-sm btn-success-sm" onclick="saveAdminQuestion()">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Firebase
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="font-weight: 800; color: #475569; font-size: 0.9rem;">
+                        Senarai Soalan Dalam Fasa Ini (<span id="admin-q-count">0</span> soalan):
+                    </div>
+                    <div id="admin-q-list" class="admin-list-container"></div>
+                </div>
+
+                <!-- TAB 2: URUS FASA -->
+                <div id="admin-tab-phases" class="admin-section">
+                    <div class="admin-form-card">
+                        <strong style="color:var(--primary);">Tambah Fasa Baharu Ke Dalam Modul</strong>
+                        <div class="admin-row" style="align-items: flex-end;">
+                            <div class="admin-field">
+                                <label>Pilih Modul:</label>
+                                <select id="admin-p-module" onchange="renderAdminPhasesList()"></select>
+                            </div>
+                            <div>
+                                <button class="btn-sm btn-primary-sm" onclick="addNewPhaseToModule()">
+                                    <i class="fa-solid fa-plus"></i> Tambah Fasa Seterusnya
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-weight: 800; color: #475569; font-size: 0.9rem;">Senarai Fasa Dalam Modul:</div>
+                    <div id="admin-p-list" class="admin-list-container"></div>
+                </div>
+
+                <!-- TAB 3: URUS MODUL -->
+                <div id="admin-tab-modules" class="admin-section">
+                    <div class="admin-form-card">
+                        <strong style="color:var(--primary);">+ Tambah Jenis Modul Baharu</strong>
+                        <div class="admin-row">
+                            <div class="admin-field">
+                                <label>Nama Modul:</label>
+                                <input type="text" id="new-mod-title" placeholder="Contoh: Kata Majmuk">
+                            </div>
+                            <div class="admin-field">
+                                <label>Penerangan Ringkas:</label>
+                                <input type="text" id="new-mod-desc" placeholder="Contoh: Latihan Kata Majmuk Kiasan & Bebas">
+                            </div>
+                            <div class="admin-field">
+                                <label>Ikon Tema:</label>
+                                <select id="new-mod-icon">
+                                    <option value="fa-dragon">Monster Battle</option>
+                                    <option value="fa-bomb">Bomber Maze</option>
+                                    <option value="fa-puzzle-piece">Sliding Puzzle</option>
+                                    <option value="fa-person-running">Super Jumper</option>
+                                    <option value="fa-book-open">Buku Terbuka</option>
+                                </select>
+                            </div>
+                            <div class="admin-field">
+                                <label>Warna Kad:</label>
+                                <select id="new-mod-color">
+                                    <option value="c-1">Kuning Emas</option>
+                                    <option value="c-2">Biru Cyan</option>
+                                    <option value="c-3">Ungu</option>
+                                    <option value="c-4">Hijau</option>
+                                    <option value="c-5">Merah</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button class="btn-sm btn-success-sm" onclick="addNewModule()">
+                                <i class="fa-solid fa-plus-circle"></i> Cipta Modul Baharu
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="font-weight: 800; color: #475569; font-size: 0.9rem;">Senarai Modul Aktif:</div>
+                    <div id="admin-m-list" class="admin-list-container"></div>
+                </div>
+
+                <!-- TAB 4: TETAPAN AKAUN FIREBASE BERASINGAN (TAHUN 5) -->
+                <div id="admin-tab-firebase" class="admin-section">
+                    <div class="admin-form-card">
+                        <strong style="color:var(--primary);"><i class="fa-solid fa-database"></i> Sambungan Projek Firebase Baharu (Khusus Tahun 5)</strong>
+                        <p style="font-size: 0.85rem; color: #475569; line-height: 1.4;">
+                            Projek lalai disambungkan terus ke <strong>kembara-bm-tahun-5</strong>. Anda juga boleh menukar konfigurasi di bawah sekiranya ingin menggunakan projek lain.
+                        </p>
+                        <div class="admin-row">
+                            <div class="admin-field">
+                                <label>API Key (apiKey):</label>
+                                <input type="text" id="fb-cfg-apiKey" placeholder="AIzaSy...">
+                            </div>
+                            <div class="admin-field">
+                                <label>Project ID (projectId):</label>
+                                <input type="text" id="fb-cfg-projectId" placeholder="kembara-bm-tahun-5">
+                            </div>
+                            <div class="admin-field">
+                                <label>Auth Domain (authDomain):</label>
+                                <input type="text" id="fb-cfg-authDomain" placeholder="kembara-bm-tahun-5.firebaseapp.com">
+                            </div>
+                            <div class="admin-field">
+                                <label>Storage Bucket (storageBucket):</label>
+                                <input type="text" id="fb-cfg-storageBucket" placeholder="kembara-bm-tahun-5.firebasestorage.app">
+                            </div>
+                            <div class="admin-field">
+                                <label>Messaging Sender ID:</label>
+                                <input type="text" id="fb-cfg-messagingSenderId" placeholder="951904419275">
+                            </div>
+                            <div class="admin-field">
+                                <label>App ID (appId):</label>
+                                <input type="text" id="fb-cfg-appId" placeholder="1:951904419275:web:3fc2b63e9dc4aa83deca4e">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; flex-wrap: wrap;">
+                            <button class="btn-sm btn-delete" onclick="clearCustomFirebaseConfig()">
+                                <i class="fa-solid fa-rotate-left"></i> Guna Konfigurasi Lalai (Tahun 5)
+                            </button>
+                            <button class="btn-sm btn-success-sm" onclick="saveCustomFirebaseConfig()">
+                                <i class="fa-solid fa-plug-circle-check"></i> Simpan &amp; Sambung Akaun Baharu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ==========================================
+           0. KONFIGURASI FIREBASE FIRESTORE (PROJEK KEMBARA BM TAHUN 5)
+           ========================================== */
+        const STORAGE_FB_CONFIG_KEY = 'kembara_bm5_custom_firebase_config';
+
+        const defaultTahun5FirebaseConfig = {
+            apiKey: "AIzaSyBluV9SC6XhJh9mIm32KShvx8oeB3RhsuA",
+            authDomain: "kembara-bm-tahun-5.firebaseapp.com",
+            projectId: "kembara-bm-tahun-5",
+            storageBucket: "kembara-bm-tahun-5.firebasestorage.app",
+            messagingSenderId: "951904419275",
+            appId: "1:951904419275:web:3fc2b63e9dc4aa83deca4e",
+            measurementId: "G-LE67NXRRR4"
+        };
+
+        let firebaseConfig = { ...defaultTahun5FirebaseConfig };
+
+        try {
+            const savedFbCfg = localStorage.getItem(STORAGE_FB_CONFIG_KEY);
+            if (savedFbCfg) {
+                const parsedCfg = JSON.parse(savedFbCfg);
+                if (parsedCfg && parsedCfg.apiKey && parsedCfg.projectId) {
+                    firebaseConfig = { ...firebaseConfig, ...parsedCfg };
+                }
+            }
+        } catch (e) {
+            console.error("Ralat membaca tetapan Firebase Tahun 5:", e);
+        }
+
+        let db = null;
+        let isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+
+        if (isFirebaseConfigured && typeof firebase !== 'undefined') {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
+            } catch (err) {
+                console.error("Ralat permulaan Firebase:", err);
+                isFirebaseConfigured = false;
+            }
+        }
+
+        function updateCloudStatusUI(state, text) {
+            const badge = document.getElementById('firebase-status-badge');
+            if (!badge) return;
+            badge.className = `cloud-status-pill ${state}`;
+            if (state === 'connected') {
+                badge.innerHTML = `<i class="fa-solid fa-cloud-check"></i> ${text}`;
+            } else if (state === 'offline') {
+                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${text}`;
+            } else {
+                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${text}`;
+            }
+        }
+
+        function populateFirebaseSettingsForm() {
+            document.getElementById('fb-cfg-apiKey').value = firebaseConfig.apiKey || '';
+            document.getElementById('fb-cfg-projectId').value = firebaseConfig.projectId || '';
+            document.getElementById('fb-cfg-authDomain').value = firebaseConfig.authDomain || '';
+            document.getElementById('fb-cfg-storageBucket').value = firebaseConfig.storageBucket || '';
+            document.getElementById('fb-cfg-messagingSenderId').value = firebaseConfig.messagingSenderId || '';
+            document.getElementById('fb-cfg-appId').value = firebaseConfig.appId || '';
+        }
+
+        function saveCustomFirebaseConfig() {
+            const apiKey = document.getElementById('fb-cfg-apiKey').value.trim();
+            const projectId = document.getElementById('fb-cfg-projectId').value.trim();
+            const authDomain = document.getElementById('fb-cfg-authDomain').value.trim() || `${projectId}.firebaseapp.com`;
+            const storageBucket = document.getElementById('fb-cfg-storageBucket').value.trim() || `${projectId}.firebasestorage.app`;
+            const messagingSenderId = document.getElementById('fb-cfg-messagingSenderId').value.trim();
+            const appId = document.getElementById('fb-cfg-appId').value.trim();
+
+            if (!apiKey || !projectId) {
+                showToast("Sila isi sekurang-kurangnya API Key dan Project ID!");
+                return;
+            }
+
+            const newConfig = { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId };
+            localStorage.setItem(STORAGE_FB_CONFIG_KEY, JSON.stringify(newConfig));
+            showToast("Tetapan Firebase disimpan! Memuat semula sambungan...");
+            setTimeout(() => location.reload(), 1200);
+        }
+
+        function clearCustomFirebaseConfig() {
+            localStorage.removeItem(STORAGE_FB_CONFIG_KEY);
+            showToast("Kembali ke projek lalai kembara-bm-tahun-5...");
+            setTimeout(() => location.reload(), 1000);
+        }
+
+        /* ==========================================
+           1. PANGKALAN DATA DINAMIK TAHUN 5 (KSSR SEMAKAN)
+           ========================================== */
+        const STORAGE_DB_KEY = 'kembara_bm_tahun5_dynamic_db';
+        const STORAGE_USER_KEY = 'kembara_bm_tahun5_user_data';
+        const STORAGE_ADMIN_KEY = 'kembara_bm_tahun5_admin_user';
+
+        const defaultGameData = {
+            modules: [
+                {
+                    id: 'tatabahasa_t5',
+                    title: 'Tatabahasa',
+                    description: 'Kata Ganda, Kata Majmuk & Kata Tugas',
+                    icon: 'fa-dragon',
+                    colorClass: 'c-1',
+                    phases: [
+                        // Fasa 1: Kata Ganda (Penuh, Separa, Berentak)
+                        [
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'buku-buku'**:", word: "buku-buku", category: "Kata Ganda Penuh", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'dedaun'**:", word: "dedaun", category: "Kata Ganda Separa", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'gotong-royong'**:", word: "gotong-royong", category: "Kata Ganda Berentak", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'kekura'**:", word: "kekura", category: "Kata Ganda Separa", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'hiruk-pikuk'**:", word: "hiruk-pikuk", category: "Kata Ganda Berentak", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'kanak-kanak'**:", word: "kanak-kanak", category: "Kata Ganda Penuh", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'bebola'**:", word: "bebola", category: "Kata Ganda Separa", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'kuih-muih'**:", word: "kuih-muih", category: "Kata Ganda Berentak", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'murid-murid'**:", word: "murid-murid", category: "Kata Ganda Penuh", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] },
+                            { type: 'drag_drop', question: "Serang raksasa! Kelaskan kata ganda **'lauk-pauk'**:", word: "lauk-pauk", category: "Kata Ganda Berentak", categories: ["Kata Ganda Penuh", "Kata Ganda Separa", "Kata Ganda Berentak"] }
+                        ],
+                        // Fasa 2: Kata Majmuk (Bebas vs Kiasan)
+                        [
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'gambar rajah'**:", word: "gambar rajah", category: "Kata Majmuk Bebas", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'kaki bangku'**:", word: "kaki bangku", category: "Kata Majmuk Kiasan", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'meja tulis'**:", word: "meja tulis", category: "Kata Majmuk Bebas", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'buah hati'**:", word: "buah hati", category: "Kata Majmuk Kiasan", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'kereta api'**:", word: "kereta api", category: "Kata Majmuk Bebas", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'cahaya mata'**:", word: "cahaya mata", category: "Kata Majmuk Kiasan", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'bandar raya'**:", word: "bandar raya", category: "Kata Majmuk Bebas", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'duit kopi'**:", word: "duit kopi", category: "Kata Majmuk Kiasan", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'tengah hari'**:", word: "tengah hari", category: "Kata Majmuk Bebas", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] },
+                            { type: 'drag_drop', question: "Kelaskan kata majmuk **'anak emas'**:", word: "anak emas", category: "Kata Majmuk Kiasan", categories: ["Kata Majmuk Bebas", "Kata Majmuk Kiasan"] }
+                        ],
+                        // Fasa 3: Kata Tugas
+                        [
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'sambil'**:", word: "sambil", category: "Kata Hubung", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'kepada'**:", word: "kepada", category: "Kata Sendi Nama", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'sedang'**:", word: "sedang", category: "Kata Bantu", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'walaupun'**:", word: "walaupun", category: "Kata Hubung", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'daripada'**:", word: "daripada", category: "Kata Sendi Nama", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'telah'**:", word: "telah", category: "Kata Bantu", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'supaya'**:", word: "supaya", category: "Kata Hubung", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'tentang'**:", word: "tentang", category: "Kata Sendi Nama", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'akan'**:", word: "akan", category: "Kata Bantu", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] },
+                            { type: 'drag_drop', question: "Kelaskan kata tugas **'kerana'**:", word: "kerana", category: "Kata Hubung", categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"] }
+                        ],
+                        ...Array.from({length: 7}, (_, i) => 
+                            Array.from({length: 10}, (_, j) => ({
+                                type: 'drag_drop',
+                                question: `[Fasa ${i+4}] Kelaskan kata tugas **'${j%3===0?'manakala':(j%3===1?'sejak':'pernah')}'**:`,
+                                word: j%3===0 ? "manakala" : (j%3===1 ? "sejak" : "pernah"),
+                                category: j%3===0 ? "Kata Hubung" : (j%3===1 ? "Kata Sendi Nama" : "Kata Bantu"),
+                                categories: ["Kata Hubung", "Kata Sendi Nama", "Kata Bantu"]
+                            }))
+                        )
+                    ]
+                },
+                {
+                    id: 'peribahasa_t5',
+                    title: 'Peribahasa',
+                    description: 'Perumpamaan, Bidalan & Pepatah',
+                    icon: 'fa-bomb',
+                    colorClass: 'c-2',
+                    phases: [
+                        [
+                            { type: 'mcq', question: "Apakah maksud perumpamaan **'Bagai aur dengan tebing'**?", options: [{ text: "Hidup saling tolong-menolong dan bekerjasama", correct: true }, { text: "Tumbuhan yang hidup di tepi sungai", correct: false }, { text: "Persahabatan yang mudah retak", correct: false }, { text: "Bekerja bersendirian tanpa bantuan", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud pepatah **'Melentur buluh biarlah dari rebungnya'**?", options: [{ text: "Mendidik anak-anak hendaklah sejak kecil lagi", correct: true }, { text: "Buluh yang muda mudah dipatahkan", correct: false }, { text: "Membuat kraf tangan daripada buluh", correct: false }, { text: "Menjaga pokok buluh di kebun", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud peribahasa **'Seperti katak di bawah tempurung'**?", options: [{ text: "Orang yang cetek pengetahuan dan tidak tahu perkembangan luar", correct: true }, { text: "Haiwan yang bersembunyi ketika hujan", correct: false }, { text: "Suka duduk di dalam rumah sahaja", correct: false }, { text: "Orang yang sangat bijak dan berilmu", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Di mana ada kemahuan, di situ ada jalan'**?", options: [{ text: "Jika bercita-cita tinggi, pasti ada cara untuk mencapainya", correct: true }, { text: "Setiap jalan raya mempunyai papan tanda", correct: false }, { text: "Berjalan kaki menuju ke destinasi", correct: false }, { text: "Mudah berputus asa apabila gagal", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Berat sama dipikul, ringan sama dijinjing'**?", options: [{ text: "Susah dan senang dihadapi bersama-sama", correct: true }, { text: "Mengangkat barang yang berat ke stor", correct: false }, { text: "Membahagikan tugas mengikut kekuatan", correct: false }, { text: "Bekerja hanya apabila mendapat upah", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Bagai mencurah air ke daun keladi'**?", options: [{ text: "Nasihat yang tidak diendahkan atau sia-sia", correct: true }, { text: "Menyiram tanaman di waktu pagi", correct: false }, { text: "Air hujan yang membasahi daun", correct: false }, { text: "Mendengar nasihat dengan penuh teliti", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Sediakan payung sebelum hujan'**?", options: [{ text: "Berwaspada dan bersiap sedia sebelum ditimpa kesusahan", correct: true }, { text: "Membawa payung setiap kali ke sekolah", correct: false }, { text: "Ramalan cuaca menunjukkan hari akan hujan", correct: false }, { text: "Membeli payung baharu di kedai", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Alah bisa tegal biasa'**?", options: [{ text: "Perkara yang sukar menjadi mudah apabila sudah biasa dilakukan", correct: true }, { text: "Sakit akibat disengat serangga berbisa", correct: false }, { text: "Tidak mahu mencuba sesuatu yang baharu", correct: false }, { text: "Kalah dalam pertandingan sukan", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Seperti kacang lupakan kulit'**?", options: [{ text: "Tidak mengenang budi orang yang pernah berjasa", correct: true }, { text: "Makan kacang sambil membuang kulitnya", correct: false }, { text: "Tanaman kacang yang subur di ladang", correct: false }, { text: "Sentiasa mengingati jasa ibu bapa", correct: false }] },
+                            { type: 'mcq', question: "Apakah maksud **'Biar putih tulang, jangan putih mata'**?", options: [{ text: "Lebih baik mati berjuang daripada menanggung malu", correct: true }, { text: "Menjaga kesihatan tulang dan mata", correct: false }, { text: "Berundur sebelum kalah dalam perlawanan", correct: false }, { text: "Takut menghadapi cabaran hidup", correct: false }] }
+                        ],
+                        ...Array.from({length: 9}, (_, i) => 
+                            Array.from({length: 10}, (_, j) => ({
+                                type: 'mcq',
+                                question: `[Fasa ${i+2} - Soalan ${j+1}] Apakah maksud bidalan 'Sedikit-sedikit, lama-lama jadi bukit'?`,
+                                options: [
+                                    { text: "Sabar dan tekun menyimpan atau berusaha akhirnya membuahkan hasil", correct: true },
+                                    { text: "Mengumpul tanah di belakang rumah", correct: false },
+                                    { text: "Mendaki bukit bersama rakan-rakan", correct: false },
+                                    { text: "Membelanjakan wang simpanan dengan cepat", correct: false }
+                                ]
+                            }))
+                        )
+                    ]
+                },
+                {
+                    id: 'imbuhan_t5',
+                    title: 'Imbuhan Apitan',
+                    description: 'Pembina Kata Berimbuhan Apitan',
+                    icon: 'fa-puzzle-piece',
+                    colorClass: 'c-3',
+                    phases: [
+                        [
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'bersih'** (membersihkan):", rootWord: "bersih", correctAffix: "mem...kan", affixOptions: ["mem...kan", "ber...an", "ter...i", "ke...an"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'ajar'** (pelajaran):", rootWord: "ajar", correctAffix: "pel...an", affixOptions: ["pel...an", "mem...i", "ber...kan", "di...i"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'indah'** (keindahan):", rootWord: "indah", correctAffix: "ke...an", affixOptions: ["ke...an", "men...kan", "per...an", "se...nya"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'jalan'** (perjalanan):", rootWord: "jalan", correctAffix: "per...an", affixOptions: ["per...an", "mem...i", "ter...kan", "di...an"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'hadiah'** (menghadiahi):", rootWord: "hadiah", correctAffix: "meng...i", affixOptions: ["meng...i", "ke...an", "ber...an", "per...kan"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'laksana'** (melaksanakan):", rootWord: "laksana", correctAffix: "me...kan", affixOptions: ["me...kan", "ke...an", "ber...i", "pe...an"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'sihat'** (kesihatan):", rootWord: "sihat", correctAffix: "ke...an", affixOptions: ["ke...an", "men...kan", "di...i", "ber...an"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'bantu'** (membantukan):", rootWord: "bantu", correctAffix: "mem...kan", affixOptions: ["mem...kan", "ke...an", "ter...i", "per...an"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'kumpul'** (perkumpulan):", rootWord: "kumpul", correctAffix: "per...an", affixOptions: ["per...an", "meng...i", "ke...an", "di...kan"] },
+                            { type: 'affix_builder', question: "Susun teka-teki & pilih imbuhan apitan bagi **'hormat'** (menghormati):", rootWord: "hormat", correctAffix: "meng...i", affixOptions: ["meng...i", "ke...an", "ber...kan", "pe...an"] }
+                        ],
+                        ...Array.from({length: 9}, (_, i) => 
+                            Array.from({length: 10}, (_, j) => ({
+                                type: 'affix_builder',
+                                question: `[Fasa ${i+2} - Soalan ${j+1}] Pilih imbuhan apitan yang sesuai untuk kata dasar **'${j%2===0?'cemerlang':'guna'}'**:`,
+                                rootWord: j%2===0 ? "cemerlang" : "guna",
+                                correctAffix: j%2===0 ? "ke...an" : "meng...kan",
+                                affixOptions: ["ke...an", "meng...kan", "ber...an", "di...i"]
+                            }))
+                        )
+                    ]
+                },
+                {
+                    id: 'sintaksis_t5',
+                    title: 'Sintaksis & Ejaan',
+                    description: 'Ayat Aktif/Pasif & Ejaan Mantap',
+                    icon: 'fa-person-running',
+                    colorClass: 'c-4',
+                    phases: [
+                        [
+                            { type: 'mcq', question: "Lompat ke pelantar! Pilih ejaan kata majmuk mantap DBP yang betul:", options: [{ text: "Kokurikulum", correct: true }, { text: "Ko-kurikulum", correct: false }, { text: "Ko kurikulum", correct: false }, { text: "Kokorikulum", correct: false }] },
+                            { type: 'mcq', question: "Lompat ke pelantar! Pilih ejaan kata majmuk mantap DBP yang betul:", options: [{ text: "Kerjasama", correct: true }, { text: "Kerja sama", correct: false }, { text: "Kerja-sama", correct: false }, { text: "Kejasama", correct: false }] },
+                            { type: 'mcq', question: "Lompat ke pelantar! Pilih ejaan kata majmuk mantap DBP yang betul:", options: [{ text: "Tanggungjawab", correct: true }, { text: "Tanggung jawab", correct: false }, { text: "Tanggung-jawab", correct: false }, { text: "Tangungjawab", correct: false }] },
+                            { type: 'mcq', question: "Tukarkan ayat aktif kepada ayat pasif yang betul: **'Saya membaca buku cerita itu.'**", options: [{ text: "Buku cerita itu saya baca.", correct: true }, { text: "Buku cerita itu dibaca oleh saya.", correct: false }, { text: "Buku cerita itu terbaca saya.", correct: false }, { text: "Saya terbaca buku cerita itu.", correct: false }] },
+                            { type: 'mcq', question: "Pilih penggunaan kata pemeri yang paling tepat:", options: [{ text: "Hadiah itu adalah untuk pemenang tempat pertama.", correct: true }, { text: "Hadiah itu ialah untuk pemenang tempat pertama.", correct: false }, { text: "Bapa saya adalah seorang jurutera.", correct: false }, { text: "Warna kegemaran adik adalah biru.", correct: false }] },
+                            { type: 'mcq', question: "Pilih ayat yang menggunakan tanda baca yang betul:", options: [{ text: "\"Bilakah kita akan bertolak ke Melaka?\" tanya Amir.", correct: true }, { text: "\"Bilakah kita akan bertolak ke Melaka,\" tanya Amir.", correct: false }, { text: "Bilakah kita akan bertolak ke Melaka? \"tanya Amir.\"", correct: false }, { text: "\"Bilakah kita akan bertolak ke Melaka\"? tanya Amir.", correct: false }] },
+                            { type: 'mcq', question: "Pilih kata penjodoh bilangan yang tepat: **'Ayah membeli tiga _____ durian di pasar malam.'**", options: [{ text: "biji", correct: true }, { text: "ulas", correct: false }, { text: "pangsa", correct: false }, { text: "tangkai", correct: false }] },
+                            { type: 'mcq', question: "Apakah perkataan seerti (sinonim) bagi **'wawasan'**?", options: [{ text: "Visi / Matlamat", correct: true }, { text: "Halangan", correct: false }, { text: "Kenangan", correct: false }, { text: "Kegagalan", correct: false }] },
+                            { type: 'mcq', question: "Apakah perkataan berlawan (antonim) bagi **'proaktif'**?", options: [{ text: "Pasif / Mundur", correct: true }, { text: "Cergas", correct: false }, { text: "Kreatif", correct: false }, { text: "Rajin", correct: false }] },
+                            { type: 'mcq', question: "Pilih ayat majmuk pancangan keterangan yang betul:", options: [{ text: "Murid-murid beratur dengan tertib sebelum masuk ke dewan.", correct: true }, { text: "Ali dan Abu bermain bola sepak di padang.", correct: false }, { text: "Kakak menyapu sampah manakala adik mengelap tingkap.", correct: false }, { text: "Kamu hendak minum teh atau kopi?", correct: false }] }
+                        ],
+                        ...Array.from({length: 9}, (_, i) => 
+                            Array.from({length: 10}, (_, j) => ({
+                                type: 'mcq',
+                                question: `[Fasa ${i+2} - Soalan ${j+1}] Pilih ejaan kata majmuk mantap yang dieja bercantum:`,
+                                options: [
+                                    { text: "Setiausaha", correct: true },
+                                    { text: "Setia usaha", correct: false },
+                                    { text: "Setia-usaha", correct: false },
+                                    { text: "Setyausaha", correct: false }
+                                ]
+                            }))
+                        )
+                    ]
+                }
+            ]
+        };
+
+        let gameDatabase = JSON.parse(JSON.stringify(defaultGameData));
+
+        const savedDb = localStorage.getItem(STORAGE_DB_KEY);
+        if (savedDb) {
+            try {
+                const parsedDb = JSON.parse(savedDb);
+                if (parsedDb && Array.isArray(parsedDb.modules) && parsedDb.modules.length > 0) {
+                    gameDatabase = parsedDb;
+                }
+            } catch (e) {
+                console.error("Ralat memuat cache tempatan Tahun 5:", e);
+            }
+        }
+
+        /* ==========================================
+           SINKRONISASI CLOUD FIREBASE FIRESTORE (TAHUN 5)
+           ========================================== */
+        async function saveGameDatabase() {
+            localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(gameDatabase));
+
+            if (!db) {
+                showToast("Disimpan di pelayar (Sila isi Tetapan Firebase untuk Cloud)");
+                return;
+            }
+
+            try {
+                await db.collection("kembara_bm_tahun5").doc("data_utama_t5").set({
+                    payloadJson: JSON.stringify(gameDatabase),
+                    grade: "Tahun 5",
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: loggedInAdmin || "System"
+                });
+                updateCloudStatusUI('connected', `Cloud Aktif (${firebaseConfig.projectId})`);
+                showToast("Berjaya disimpan ke Firebase Cloud Tahun 5! ☁️");
+            } catch (error) {
+                console.error("Ralat menyimpan ke Firestore Tahun 5:", error);
+                if (error.code === 'permission-denied') {
+                    updateCloudStatusUI('offline', 'Sekatan Rules Firestore (permission-denied)');
+                    showToast("Ralat Kebenaran! Sila tukar Firestore Rules kepada 'allow read, write: if true;'");
+                } else {
+                    showToast("Ralat simpan ke Firebase: " + error.message);
+                }
+            }
+        }
+
+        function initFirebaseRealtimeSync() {
+            if (!db) {
+                updateCloudStatusUI('offline', 'Mod Tempatan (Sila Sambung Akaun Firebase Tahun 5)');
+                return;
+            }
+
+            db.collection("kembara_bm_tahun5").doc("data_utama_t5").onSnapshot(
+                async (doc) => {
+                    if (doc.exists && doc.data().payloadJson) {
+                        try {
+                            const cloudData = JSON.parse(doc.data().payloadJson);
+                            if (cloudData && Array.isArray(cloudData.modules) && cloudData.modules.length > 0) {
+                                gameDatabase = cloudData;
+                                localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(gameDatabase));
+                                
+                                renderModuleMenu();
+                                if (document.getElementById('screen-admin').classList.contains('active')) {
+                                    populateAdminModuleDropdowns();
+                                    renderAdminModulesList();
+                                    renderAdminPhasesList();
+                                    renderAdminQuestionsList();
+                                }
+                            }
+                            updateCloudStatusUI('connected', `Cloud Aktif (${firebaseConfig.projectId})`);
+                        } catch (e) {
+                            console.error("Ralat membaca data Firebase Tahun 5:", e);
+                        }
+                    } else {
+                        await saveGameDatabase();
+                    }
+                },
+                (error) => {
+                    console.error("Ralat sambungan Firestore Tahun 5:", error);
+                    if (error.code === 'permission-denied') {
+                        updateCloudStatusUI('offline', 'Sila benarkan Rules di Firestore Console');
+                    } else {
+                        updateCloudStatusUI('offline', 'Gagal Sambung Firebase Tahun 5');
+                    }
+                }
+            );
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-notification');
+            document.getElementById('toast-text').textContent = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        /* ==========================================
+           2. SISTEM PENGURUSAN PENGGUNA & PENDAFTARAN
+           ========================================== */
+        let currentUser = {
+            name: "Murid BM 5",
+            avatar: "fa-user-astronaut",
+            unlockedPhases: {}
+        };
+
+        const savedUserData = localStorage.getItem(STORAGE_USER_KEY);
+        if (savedUserData) {
+            try {
+                const parsed = JSON.parse(savedUserData);
+                if (parsed && parsed.unlockedPhases) {
+                    currentUser = parsed;
+                }
+            } catch (e) {
+                console.error("Gagal membaca rekod lama Tahun 5:", e);
+            }
+        }
+
+        function saveUserData() {
+            localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(currentUser));
+        }
+
+        let currentModuleId = 'tatabahasa_t5';
+        let currentPhase = 0;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let phaseScore = 0;
+        let streak = 0;
+        let selectedAvatarIcon = 'fa-user-astronaut';
+
+        // Pemboleh ubah keadaan khusus gamifikasi
+        let monsterHp = 100;
+        let heroHp = 100;
+        let jumperAltitude = 0;
+
+        /* Pemetaan Mod Gamifikasi Mengikut Urutan Modul (0: Monster Battle, 1: Bomber Maze, 2: Sliding Puzzle, 3: Super Jumper) */
+        const GAME_MODES_META = [
+            {
+                key: 'monster_battle',
+                name: 'Monster Battle',
+                icon: 'fa-dragon',
+                desc: 'Jawab dengan tepat untuk menyerang dan menewaskan Raksasa Tatabahasa!'
+            },
+            {
+                key: 'bomber_maze',
+                name: 'Bomber Maze',
+                icon: 'fa-bomb',
+                desc: 'Letupkan peti halangan di pagar sesat dan jawab peribahasa untuk ke pintu keluar!'
+            },
+            {
+                key: 'sliding_puzzle',
+                name: 'Sliding Puzzle',
+                icon: 'fa-puzzle-piece',
+                desc: 'Gelongsor kepingan teka-teki 3×3 dan lengkapkan imbuhan apitan yang betul!'
+            },
+            {
+                key: 'super_jumper',
+                name: 'Super Jumper',
+                icon: 'fa-person-running',
+                desc: 'Pilih jawapan tepat supaya wira melompat tinggi merentasi pelantar awan!'
+            }
+        ];
+
+        function getModuleGameMode(moduleId) {
+            const idx = gameDatabase.modules.findIndex(m => m.id === moduleId);
+            const safeIdx = idx >= 0 ? idx : 0;
+            return GAME_MODES_META[safeIdx % GAME_MODES_META.length];
+        }
+
+        function selectAvatar(element) {
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedAvatarIcon = element.getAttribute('data-icon');
+        }
+
+        function registerUser() {
+            const nameInput = document.getElementById('player-name-input').value.trim();
+            if (!nameInput) {
+                showToast("Sila masukkan nama anda dahulu!");
+                return;
+            }
+
+            currentUser.name = nameInput;
+            currentUser.avatar = selectedAvatarIcon;
+            saveUserData();
+
+            document.getElementById('user-name-display').textContent = currentUser.name;
+            document.getElementById('user-avatar-display').innerHTML = `<i class="fa-solid ${currentUser.avatar}"></i>`;
+            document.getElementById('main-header').style.display = 'flex';
+
+            renderModuleMenu();
+            showScreen('screen-menu');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function backToLogin() {
+            document.getElementById('main-header').style.display = 'none';
+            showScreen('screen-auth');
+        }
+
+        /* ==========================================
+           3. JANA MENU MODUL & FASA SECARA DINAMIK
+           ========================================== */
+        function getModuleById(modId) {
+            return gameDatabase.modules.find(m => m.id === modId) || gameDatabase.modules[0];
+        }
+
+        function renderModuleMenu() {
+            const grid = document.getElementById('dynamic-menu-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            gameDatabase.modules.forEach((mod, idx) => {
+                const modeMeta = GAME_MODES_META[idx % GAME_MODES_META.length];
+                const card = document.createElement('div');
+                card.className = `menu-card ${mod.colorClass || 'c-1'}`;
+                card.onclick = () => openPhaseSelection(mod.id);
+                card.innerHTML = `
+                    <div class="menu-icon"><i class="fa-solid ${mod.icon || modeMeta.icon}"></i></div>
+                    <div class="menu-card-body">
+                        <h3 style="font-family:'Fredoka One'; font-size:1.15rem;">${mod.title}</h3>
+                        <p style="font-size:0.82rem; color:#64748B; margin: 4px 0;">${mod.description || ''}</p>
+                        <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:6px;">
+                            <span class="mode-pill"><i class="fa-solid ${modeMeta.icon}" style="color:var(--primary);"></i> ${modeMeta.name}</span>
+                            <span style="font-size:0.72rem; font-weight:800; color:var(--primary); background:#CCFBF1; padding:3px 9px; border-radius:12px;">
+                                ${mod.phases.length} Fasa
+                            </span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openPhaseSelection(moduleId) {
+            const mod = getModuleById(moduleId);
+            if (!mod) return;
+            currentModuleId = mod.id;
+            const modeMeta = getModuleGameMode(mod.id);
+
+            document.getElementById('module-title-tag').textContent = `${mod.title} • ${modeMeta.name}`;
+            document.getElementById('module-game-mode-desc').textContent = `${modeMeta.desc} (Lulus ≥ 70%)`;
+
+            const container = document.getElementById('phase-container');
+            container.innerHTML = '';
+
+            const unlockedLevel = currentUser.unlockedPhases[mod.id] || 1;
+            const totalPhases = mod.phases.length;
+
+            for (let i = 1; i <= totalPhases; i++) {
+                const isLocked = i > unlockedLevel;
+                const isCompleted = i < unlockedLevel;
+                const qCount = mod.phases[i - 1].length;
+                const card = document.createElement('div');
+                card.className = `phase-card ${isLocked ? 'locked' : ''}`;
+                card.innerHTML = `
+                    <div class="phase-number">Fasa ${i}</div>
+                    <div class="status-icon">
+                        <i class="fa-solid ${isLocked ? 'fa-lock' : (isCompleted ? 'fa-circle-check' : 'fa-star')}" style="color:${isLocked ? '#94A3B8' : (isCompleted ? '#10B981' : '#F59E0B')};"></i>
+                    </div>
+                    <div style="font-size:0.75rem; font-weight:700; margin-top:4px; color:${isLocked ? '#94A3B8' : '#475569'};">
+                        ${isLocked ? 'Terkunci' : `${qCount} Soalan`}
+                    </div>
+                `;
+
+                if (!isLocked) {
+                    card.onclick = () => startPhase(i - 1);
+                }
+
+                container.appendChild(card);
+            }
+
+            showScreen('screen-phases');
+        }
+
+        function startPhase(phaseIndex) {
+            const mod = getModuleById(currentModuleId);
+            if (!mod || !mod.phases[phaseIndex] || mod.phases[phaseIndex].length === 0) {
+                showToast("Tiada soalan dalam fasa ini lagi. Sila tambah di Admin Panel.");
+                return;
+            }
+
+            currentPhase = phaseIndex;
+            currentQuestionIndex = 0;
+            phaseScore = 0;
+            streak = 0;
+
+            // Reset keadaan mini-game bagi fasa baharu
+            monsterHp = 100;
+            heroHp = 100;
+            jumperAltitude = 0;
+
+            updateStats();
+
+            const modeMeta = getModuleGameMode(currentModuleId);
+            document.getElementById('game-mode-badge').innerHTML = `<i class="fa-solid ${modeMeta.icon}"></i> ${modeMeta.name}`;
+            document.getElementById('game-phase-tag').textContent = `Fasa ${phaseIndex + 1}`;
+            showScreen('screen-game');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            hideFeedback();
+            const mod = getModuleById(currentModuleId);
+            const questions = mod.phases[currentPhase];
+            
+            if (!questions || currentQuestionIndex >= questions.length) {
+                finishPhase();
+                return;
+            }
+
+            const qData = questions[currentQuestionIndex];
+            const modeMeta = getModuleGameMode(currentModuleId);
+            
+            const progressPct = (currentQuestionIndex / questions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${progressPct}%`;
+
+            const formattedQuestion = qData.question.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--primary);">$1</strong>');
+            document.getElementById('instruction-text').innerHTML = formattedQuestion;
+            
+            const area = document.getElementById('game-interactive-area');
+            area.innerHTML = '';
+
+            // Halakan mengikut mod gamifikasi modul semasa
+            if (modeMeta.key === 'monster_battle') {
+                renderMonsterBattle(qData, area);
+            } else if (modeMeta.key === 'bomber_maze') {
+                renderBomberMaze(qData, area);
+            } else if (modeMeta.key === 'sliding_puzzle') {
+                renderSlidingPuzzle(qData, area);
+            } else if (modeMeta.key === 'super_jumper') {
+                renderSuperJumper(qData, area);
+            } else {
+                renderFallbackClassic(qData, area);
+            }
+        }
+
+        /* =========================================================
+           4A. KONSEP 1: MONSTER BATTLE (MODUL 1 - TATABAHASA)
+           ========================================================= */
+        function renderMonsterBattle(qData, area) {
+            const monsters = ['fa-dragon', 'fa-spaghetti-monster-flying', 'fa-ghost', 'fa-spider', 'fa-hippo'];
+            const currentMonsterIcon = monsters[currentPhase % monsters.length];
+
+            const arena = document.createElement('div');
+            arena.className = 'battle-arena';
+            arena.innerHTML = `
+                <div class="battle-fighters">
+                    <div class="fighter-box">
+                        <div class="hp-bar-wrap">
+                            <div class="hp-bar-label"><span>${currentUser.name}</span><span>${heroHp}%</span></div>
+                            <div class="hp-track"><div class="hp-fill hero" style="width:${heroHp}%"></div></div>
+                        </div>
+                        <div id="battle-hero-sprite" class="fighter-sprite" style="color:#34D399;">
+                            <i class="fa-solid ${currentUser.avatar || 'fa-user-astronaut'}"></i>
+                        </div>
+                    </div>
+
+                    <div id="battle-projectile" class="battle-projectile"><i class="fa-solid fa-bolt"></i></div>
+
+                    <div class="fighter-box">
+                        <div class="hp-bar-wrap">
+                            <div class="hp-bar-label"><span>Raksasa Kata</span><span>${monsterHp}%</span></div>
+                            <div class="hp-track"><div class="hp-fill monster" style="width:${monsterHp}%"></div></div>
+                        </div>
+                        <div id="battle-monster-sprite" class="fighter-sprite" style="color:#FBBF24;">
+                            <i class="fa-solid ${currentMonsterIcon}"></i>
+                        </div>
+                    </div>
+                </div>
+                ${qData.word ? `<div class="battle-word-banner">Sasaran Kata: <span style="color:#FDE047; font-size:1.25rem;">"${qData.word}"</span></div>` : ''}
+            `;
+
+            const weaponsGrid = document.createElement('div');
+            weaponsGrid.className = 'battle-weapons-grid';
+
+            // Sokong soalan jenis drag_drop atau mcq dalam mod Monster Battle
+            let choices = [];
+            if (qData.type === 'drag_drop' && Array.isArray(qData.categories)) {
+                choices = shuffleArray(qData.categories).map(cat => ({
+                    label: cat,
+                    isCorrect: cat.trim().toLowerCase() === qData.category.trim().toLowerCase()
+                }));
+            } else if (qData.type === 'mcq' && Array.isArray(qData.options)) {
+                choices = shuffleArray(qData.options).map(opt => ({
+                    label: opt.text,
+                    isCorrect: opt.correct
+                }));
+            } else {
+                choices = [{ label: qData.correctAffix || 'Serang', isCorrect: true }];
+            }
+
+            const weaponIcons = ['fa-wand-magic-sparkles', 'fa-shield-halved', 'fa-fire-flame-curved', 'fa-bolt'];
+
+            choices.forEach((choice, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'weapon-btn';
+                btn.innerHTML = `
+                    <i class="fa-solid ${weaponIcons[idx % weaponIcons.length]}" style="color:var(--primary); font-size:1.25rem;"></i>
+                    <span>${choice.label}</span>
+                `;
+                btn.onclick = () => {
+                    if (isAnswering) return;
+                    const heroEl = document.getElementById('battle-hero-sprite');
+                    const monsterEl = document.getElementById('battle-monster-sprite');
+                    const projEl = document.getElementById('battle-projectile');
+
+                    if (choice.isCorrect) {
+                        heroEl.classList.add('hero-attack-anim');
+                        projEl.classList.add('fire-beam');
+                        setTimeout(() => monsterEl.classList.add('monster-hit-anim'), 200);
+                        monsterHp = Math.max(0, monsterHp - 10);
+                    } else {
+                        monsterEl.classList.add('hero-attack-anim');
+                        setTimeout(() => heroEl.classList.add('hero-hit-anim'), 200);
+                        heroHp = Math.max(10, heroHp - 15);
+                    }
+                    checkAnswer(choice.isCorrect);
+                };
+                weaponsGrid.appendChild(btn);
+            });
+
+            area.appendChild(arena);
+            area.appendChild(weaponsGrid);
+        }
+
+        /* =========================================================
+           4B. KONSEP 2: BOMBER MAZE (MODUL 2 - PERIBAHASA)
+           ========================================================= */
+        let bomberState = null;
+
+        function renderBomberMaze(qData, area) {
+            // Grid 5x5: 0=lantai, 1=dinding batu, 2=peti kayu (boleh diletupkan), 3=pintu soalan
+            const layout = [
+                [0, 0, 1, 0, 0],
+                [0, 1, 2, 0, 1],
+                [0, 2, 0, 2, 0],
+                [1, 0, 1, 0, 0],
+                [0, 0, 2, 0, 3]
+            ];
+
+            bomberState = {
+                grid: layout.map(r => [...r]),
+                px: 0,
+                py: 0,
+                quizUnlocked: false,
+                qData: qData
+            };
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bomber-layout';
+            wrapper.id = 'bomber-wrapper';
+            area.appendChild(wrapper);
+
+            drawBomberMaze();
+        }
+
+        function drawBomberMaze() {
+            const wrapper = document.getElementById('bomber-wrapper');
+            if (!wrapper || !bomberState) return;
+
+            wrapper.innerHTML = `
+                <div class="bomber-top-info">
+                    <span><i class="fa-solid fa-bomb"></i> Bom &amp; Cari Pintu (<i class="fa-solid fa-door-open"></i>)</span>
+                    <button class="btn-sm btn-edit" onclick="unlockBomberQuizDirectly()">Terus Jawab <i class="fa-solid fa-bolt"></i></button>
+                </div>
+                <div class="maze-grid" id="bomber-maze-grid"></div>
+                <div class="bomber-controls" id="bomber-dpad">
+                    <div></div>
+                    <button class="dpad-btn" onclick="moveBomber(0, -1)" aria-label="Atas"><i class="fa-solid fa-arrow-up"></i></button>
+                    <div></div>
+                    <button class="dpad-btn" onclick="moveBomber(-1, 0)" aria-label="Kiri"><i class="fa-solid fa-arrow-left"></i></button>
+                    <button class="dpad-btn bomb-btn" onclick="placeBomberBomb()" aria-label="Letak Bom"><i class="fa-solid fa-bomb"></i></button>
+                    <button class="dpad-btn" onclick="moveBomber(1, 0)" aria-label="Kanan"><i class="fa-solid fa-arrow-right"></i></button>
+                    <div></div>
+                    <button class="dpad-btn" onclick="moveBomber(0, 1)" aria-label="Bawah"><i class="fa-solid fa-arrow-down"></i></button>
+                    <div></div>
+                </div>
+                <div id="bomber-quiz-slot" style="width:100%;"></div>
+            `;
+
+            const gridEl = document.getElementById('bomber-maze-grid');
+            for (let y = 0; y < 5; y++) {
+                for (let x = 0; x < 5; x++) {
+                    const cell = document.createElement('div');
+                    const val = bomberState.grid[y][x];
+                    cell.className = 'maze-cell ' + (val === 1 ? 'wall' : val === 2 ? 'crate' : val === 3 ? 'goal' : 'floor');
+                    cell.id = `maze-cell-${x}-${y}`;
+
+                    if (bomberState.px === x && bomberState.py === y) {
+                        cell.innerHTML = `<i class="fa-solid ${currentUser.avatar || 'fa-user-ninja'}" style="color:var(--primary);"></i>`;
+                    } else if (val === 1) {
+                        cell.innerHTML = `<i class="fa-solid fa-cubes" style="color:#475569; font-size:1rem;"></i>`;
+                    } else if (val === 2) {
+                        cell.innerHTML = `<i class="fa-solid fa-box"></i>`;
+                    } else if (val === 3) {
+                        cell.innerHTML = `<i class="fa-solid fa-door-open"></i>`;
+                    }
+
+                    // Klik terus pada petak bersebelahan atau peti untuk bergerak/bom (mesra sentuhan mobile)
+                    cell.onclick = () => {
+                        const dx = x - bomberState.px;
+                        const dy = y - bomberState.py;
+                        if (Math.abs(dx) + Math.abs(dy) === 1) {
+                            if (bomberState.grid[y][x] === 2) {
+                                placeBomberBomb();
+                            } else {
+                                moveBomber(dx, dy);
+                            }
+                        } else if (val === 3) {
+                            unlockBomberQuizDirectly();
+                        }
+                    };
+
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            if (bomberState.quizUnlocked) {
+                renderBomberQuizOptions();
+            }
+        }
+
+        function moveBomber(dx, dy) {
+            if (!bomberState || bomberState.quizUnlocked) return;
+            const nx = bomberState.px + dx;
+            const ny = bomberState.py + dy;
+            if (nx < 0 || nx >= 5 || ny < 0 || ny >= 5) return;
+
+            const targetVal = bomberState.grid[ny][nx];
+            if (targetVal === 1 || targetVal === 2) {
+                showToast("Laluan terhalang! Tekan butang BOM untuk letupkan peti kayu.");
+                return;
+            }
+
+            bomberState.px = nx;
+            bomberState.py = ny;
+
+            if (targetVal === 3) {
+                bomberState.quizUnlocked = true;
+            }
+            drawBomberMaze();
+        }
+
+        function placeBomberBomb() {
+            if (!bomberState || bomberState.quizUnlocked) return;
+            const dirs = [[0,0], [1,0], [-1,0], [0,1], [0,-1]];
+            let blastedAny = false;
+
+            dirs.forEach(([dx, dy]) => {
+                const bx = bomberState.px + dx;
+                const by = bomberState.py + dy;
+                if (bx >= 0 && bx < 5 && by >= 0 && by < 5) {
+                    const cellEl = document.getElementById(`maze-cell-${bx}-${by}`);
+                    if (cellEl) {
+                        cellEl.classList.add('explosion');
+                        cellEl.innerHTML = `<i class="fa-solid fa-burst"></i>`;
+                    }
+                    if (bomberState.grid[by][bx] === 2) {
+                        bomberState.grid[by][bx] = 0;
+                        blastedAny = true;
+                    }
+                }
+            });
+
+            setTimeout(() => {
+                if (bomberState) {
+                    if (!blastedAny) {
+                        // Jika tiada peti bersebelahan, buka peti terdekat secara automatik untuk kelancaran murid
+                        for (let y = 0; y < 5; y++) {
+                            for (let x = 0; x < 5; x++) {
+                                if (bomberState.grid[y][x] === 2) {
+                                    bomberState.grid[y][x] = 0;
+                                    drawBomberMaze();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    drawBomberMaze();
+                }
+            }, 350);
+        }
+
+        function unlockBomberQuizDirectly() {
+            if (!bomberState) return;
+            bomberState.px = 4;
+            bomberState.py = 4;
+            bomberState.quizUnlocked = true;
+            drawBomberMaze();
+        }
+
+        function renderBomberQuizOptions() {
+            const slot = document.getElementById('bomber-quiz-slot');
+            const dpad = document.getElementById('bomber-dpad');
+            if (dpad) dpad.style.display = 'none';
+            if (!slot || !bomberState) return;
+
+            const qData = bomberState.qData;
+            slot.innerHTML = `<div class="maze-quiz-panel">
+                <div style="font-weight:800; color:var(--secondary); margin-bottom:10px; text-align:center;">
+                    <i class="fa-solid fa-key"></i> Pintu Terbuka! Pilih maksud peribahasa yang tepat:
+                </div>
+                <div id="bomber-options-grid" class="options-grid"></div>
+            </div>`;
+
+            const grid = document.getElementById('bomber-options-grid');
+            const letters = ['A', 'B', 'C', 'D'];
+            const opts = qData.options ? shuffleArray(qData.options) : [{ text: qData.category || 'Betul', correct: true }];
+
+            opts.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="opt-index">${letters[idx] || idx + 1}</span><span>${opt.text}</span>`;
+                btn.onclick = () => checkAnswer(opt.correct);
+                grid.appendChild(btn);
+            });
+        }
+
+        /* =========================================================
+           4C. KONSEP 3: SLIDING PUZZLE (MODUL 3 - IMBUHAN APITAN)
+           ========================================================= */
+        let slidingTiles = [];
+
+        function renderSlidingPuzzle(qData, area) {
+            const rootWord = qData.rootWord || 'kata';
+            const correctAffix = qData.correctAffix || 'mem...kan';
+            const affixParts = correctAffix.split('...');
+            const prefix = affixParts[0] || '';
+            const suffix = affixParts[1] || '';
+
+            // Bina 9 kepingan (8 kepingan + 1 ruang kosong) yang hampir tersusun supaya seronok & pantas diselesaikan murid
+            const solvedLabels = [
+                { num: 1, text: prefix || 'Imbuhan', highlight: true },
+                { num: 2, text: rootWord.toUpperCase(), highlight: true },
+                { num: 3, text: suffix || 'Apitan', highlight: true },
+                { num: 4, text: 'KATA', highlight: false },
+                { num: 5, text: 'BERIMBUHAN', highlight: false },
+                { num: 6, text: 'APITAN', highlight: false },
+                { num: 7, text: 'TAHUN 5', highlight: false },
+                { num: 8, text: 'KSSR', highlight: false },
+                { num: 0, text: '', highlight: false } // Ruang kosong
+            ];
+
+            // Lakukan beberapa langkah gelongsor sah dari keadaan tersusun supaya sentiasa boleh diselesaikan
+            slidingTiles = solvedLabels.map(t => ({ ...t }));
+            let emptyIdx = 8;
+            const validNeighbors = {
+                0: [1, 3], 1: [0, 2, 4], 2: [1, 5],
+                3: [0, 4, 6], 4: [1, 3, 5, 7], 5: [2, 4, 8],
+                6: [3, 7], 7: [4, 6, 8], 8: [5, 7]
+            };
+            let prevIdx = -1;
+            for (let step = 0; step < 5; step++) {
+                const choices = validNeighbors[emptyIdx].filter(n => n !== prevIdx);
+                const pick = choices[Math.floor(Math.random() * choices.length)];
+                [slidingTiles[emptyIdx], slidingTiles[pick]] = [slidingTiles[pick], slidingTiles[emptyIdx]];
+                prevIdx = emptyIdx;
+                emptyIdx = pick;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sliding-layout';
+            wrapper.innerHTML = `
+                <div style="font-size:0.85rem; font-weight:800; color:#6D28D9; text-align:center;">
+                    <i class="fa-solid fa-hand-pointer"></i> Klik kepingan bersebelahan ruang kosong untuk menggeser teka-teki, kemudian pilih imbuhan apitan!
+                </div>
+                <div id="sliding-board-grid" class="sliding-board"></div>
+                <div style="width:100%; text-align:center; font-weight:800; color:#475569; font-size:0.9rem;">
+                    Gabungkan dengan kata dasar <span style="color:var(--accent-purple); font-size:1.1rem;">"${rootWord}"</span>:
+                </div>
+                <div id="sliding-affix-choices" class="options-grid" style="width:100%;"></div>
+            `;
+
+            area.appendChild(wrapper);
+            drawSlidingBoard();
+
+            const choicesGrid = document.getElementById('sliding-affix-choices');
+            const optionsList = qData.affixOptions ? shuffleArray(qData.affixOptions) : [correctAffix];
+            const letters = ['A', 'B', 'C', 'D'];
+
+            optionsList.forEach((affix, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `
+                    <span class="opt-index" style="color:var(--accent-purple);">${letters[idx] || idx + 1}</span>
+                    <span><strong>${affix}</strong> + ${rootWord}</span>
+                `;
+                btn.onclick = () => checkAnswer(affix.trim().toLowerCase() === correctAffix.trim().toLowerCase());
+                choicesGrid.appendChild(btn);
+            });
+        }
+
+        function drawSlidingBoard() {
+            const board = document.getElementById('sliding-board-grid');
+            if (!board) return;
+            board.innerHTML = '';
+
+            slidingTiles.forEach((tile, idx) => {
+                const div = document.createElement('div');
+                if (tile.num === 0) {
+                    div.className = 'slide-tile empty';
+                } else {
+                    div.className = `slide-tile ${tile.highlight ? 'highlight-piece' : ''}`;
+                    div.innerHTML = `<span class="slide-tile-num">#${tile.num}</span><span>${tile.text}</span>`;
+                    div.onclick = () => handleSlideTileClick(idx);
+                }
+                board.appendChild(div);
+            });
+        }
+
+        function handleSlideTileClick(idx) {
+            const emptyIdx = slidingTiles.findIndex(t => t.num === 0);
+            const row1 = Math.floor(idx / 3), col1 = idx % 3;
+            const row2 = Math.floor(emptyIdx / 3), col2 = emptyIdx % 3;
+
+            if (Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1) {
+                [slidingTiles[idx], slidingTiles[emptyIdx]] = [slidingTiles[emptyIdx], slidingTiles[idx]];
+                drawSlidingBoard();
+            }
+        }
+
+        /* =========================================================
+           4D. KONSEP 4: SUPER JUMPER (MODUL 4 - SINTAKSIS & EJAAN)
+           ========================================================= */
+        function renderSuperJumper(qData, area) {
+            const arena = document.createElement('div');
+            arena.className = 'jumper-arena';
+            arena.innerHTML = `
+                <div class="jumper-sky-hud">
+                    <span><i class="fa-solid fa-cloud"></i> Ketinggian Lompatan: ${jumperAltitude}m</span>
+                    <span><i class="fa-solid fa-star" style="color:#FDE047;"></i> Sasaran Puncak</span>
+                </div>
+                <div class="jumper-platforms-row">
+                    <div class="sky-platform p-low">
+                        <div id="jumper-hero-sprite" class="jumper-hero">
+                            <i class="fa-solid ${currentUser.avatar || 'fa-person-running'}"></i>
+                        </div>
+                    </div>
+                    <div class="sky-platform p-mid">
+                        <i class="fa-solid fa-coins" style="color:#FDE047; position:absolute; top:-24px; font-size:1.2rem;"></i>
+                    </div>
+                    <div class="sky-platform p-high">
+                        <i class="fa-solid fa-trophy" style="color:#FDE047; position:absolute; top:-28px; font-size:1.4rem;"></i>
+                    </div>
+                </div>
+            `;
+
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            const letters = ['A', 'B', 'C', 'D'];
+            const shuffledOptions = qData.options ? shuffleArray(qData.options) : [{ text: 'Jawapan', correct: true }];
+
+            shuffledOptions.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `
+                    <span class="opt-index">${letters[idx] || idx + 1}</span>
+                    <span>${opt.text}</span>
+                `;
+                btn.onclick = () => {
+                    if (isAnswering) return;
+                    const heroEl = document.getElementById('jumper-hero-sprite');
+                    if (opt.correct) {
+                        jumperAltitude += 100;
+                        if (heroEl) {
+                            heroEl.classList.add('hero-super-jump');
+                            heroEl.style.transform = 'translate(115px, -48px)';
+                        }
+                    } else {
+                        if (heroEl) heroEl.classList.add('hero-slip-anim');
+                    }
+                    checkAnswer(opt.correct);
+                };
+                grid.appendChild(btn);
+            });
+
+            area.appendChild(arena);
+            area.appendChild(grid);
+        }
+
+        function renderFallbackClassic(qData, area) {
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            const letters = ['A', 'B', 'C', 'D'];
+            const opts = qData.options ? shuffleArray(qData.options) : [{ text: 'Teruskan', correct: true }];
+            opts.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="opt-index">${letters[idx] || idx + 1}</span><span>${opt.text}</span>`;
+                btn.onclick = () => checkAnswer(opt.correct);
+                grid.appendChild(btn);
+            });
+            area.appendChild(grid);
+        }
+
+        let isAnswering = false;
+        function checkAnswer(isCorrect) {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            const banner = document.getElementById('feedback-banner');
+            if (isCorrect) {
+                banner.textContent = "Tahniah! Jawapan anda Tepat! 🎉";
+                banner.className = "feedback-banner correct";
+                score += 10;
+                phaseScore += 10;
+                streak++;
+            } else {
+                banner.textContent = "Jawapan kurang tepat. Cuba lagi pada soalan seterusnya!";
+                banner.className = "feedback-banner wrong";
+                streak = 0;
+            }
+            updateStats();
+
+            setTimeout(() => {
+                isAnswering = false;
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 1050);
+        }
+
+        function hideFeedback() {
+            const banner = document.getElementById('feedback-banner');
+            banner.style.display = 'none';
+            banner.className = 'feedback-banner';
+        }
+
+        function updateStats() {
+            document.getElementById('score-val').textContent = score;
+            document.getElementById('streak-val').textContent = streak;
+        }
+
+        /* 5. SELESAI FASA & UNLOCK FASA SETERUSNYA */
+        function finishPhase() {
+            document.getElementById('progress-fill').style.width = '100%';
+            
+            const mod = getModuleById(currentModuleId);
+            const totalQuestions = mod.phases[currentPhase].length;
+            const maxPhaseScore = totalQuestions * 10;
+            const percentage = maxPhaseScore > 0 ? Math.round((phaseScore / maxPhaseScore) * 100) : 0;
+            
+            const passed = percentage >= 70;
+            const totalPhasesInMod = mod.phases.length;
+
+            if (passed) {
+                const nextPhaseLevel = currentPhase + 2;
+                const currentUnlocked = currentUser.unlockedPhases[currentModuleId] || 1;
+                
+                if (nextPhaseLevel > currentUnlocked) {
+                    currentUser.unlockedPhases[currentModuleId] = Math.min(totalPhasesInMod, nextPhaseLevel);
+                    saveUserData();
+                }
+            }
+
+            document.getElementById('final-score').textContent = `${percentage}%`;
+            
+            const titleEl = document.getElementById('result-title');
+            const msgEl = document.getElementById('result-message');
+
+            if (passed) {
+                titleEl.textContent = "Tahniah, Anda Lulus! 🎉";
+                titleEl.style.color = "#FDE047";
+                if (currentPhase + 1 < totalPhasesInMod) {
+                    msgEl.textContent = `Syabas! Anda mendapat ${percentage}% markah dan berjaya membuka Fasa ${currentPhase + 2}!`;
+                } else {
+                    msgEl.textContent = `Hebat! Anda telah menamatkan semua fasa dalam Modul ${mod.title} dengan markah ${percentage}%!`;
+                }
+            } else {
+                titleEl.textContent = "Cuba Lagi! 💡";
+                titleEl.style.color = "#EF4444";
+                msgEl.textContent = `Markah anda (${percentage}%) belum mencapai minimum 70%. Sila cuba lagi untuk menyahkunci fasa seterusnya!`;
+            }
+
+            showScreen('screen-result');
+        }
+
+        /* ==========================================
+           6. LOGIK ADMIN PANEL (URUS MODUL, FASA & SOALAN)
+           ========================================== */
+        const authorizedAdmins = [
+            { username: 'NQA', password: 'nqa123' },
+            { username: 'MFR', password: 'mfr123' }
+        ];
+        let loggedInAdmin = sessionStorage.getItem(STORAGE_ADMIN_KEY) || null;
+
+        function openAdminPanel() {
+            if (!loggedInAdmin) {
+                document.getElementById('admin-login-username').value = '';
+                document.getElementById('admin-login-password').value = '';
+                showScreen('screen-admin-login');
+                return;
+            }
+            document.getElementById('active-admin-badge').textContent = loggedInAdmin;
+            populateAdminModuleDropdowns();
+            renderAdminModulesList();
+            renderAdminPhasesList();
+            renderAdminQuestionsList();
+            populateFirebaseSettingsForm();
+            showScreen('screen-admin');
+        }
+
+        function verifyAdminLogin() {
+            const usernameInput = document.getElementById('admin-login-username').value.trim();
+            const passwordInput = document.getElementById('admin-login-password').value;
+
+            const validAdmin = authorizedAdmins.find(
+                admin => admin.username.toUpperCase() === usernameInput.toUpperCase() && admin.password === passwordInput
+            );
+
+            if (!validAdmin) {
+                showToast("Nama pengguna atau kata laluan Admin tidak sah!");
+                return;
+            }
+
+            loggedInAdmin = validAdmin.username;
+            sessionStorage.setItem(STORAGE_ADMIN_KEY, loggedInAdmin);
+            showToast(`Selamat datang, Admin ${loggedInAdmin}!`);
+            openAdminPanel();
+        }
+
+        function logoutAdmin() {
+            loggedInAdmin = null;
+            sessionStorage.removeItem(STORAGE_ADMIN_KEY);
+            showToast("Anda telah log keluar daripada Admin Panel.");
+            exitAdminPanel();
+        }
+
+        function exitAdminPanel() {
+            renderModuleMenu();
+            if (currentUser && currentUser.name && currentUser.name !== "Murid BM 5") {
+                document.getElementById('main-header').style.display = 'flex';
+                showScreen('screen-menu');
+            } else {
+                document.getElementById('main-header').style.display = 'none';
+                showScreen('screen-auth');
+            }
+        }
+
+        function switchAdminTab(tabName, btnEl) {
+            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`admin-tab-${tabName}`).classList.add('active');
+        }
+
+        function populateAdminModuleDropdowns() {
+            const qModSelect = document.getElementById('admin-q-module');
+            const pModSelect = document.getElementById('admin-p-module');
+            const prevQMod = qModSelect.value;
+            const prevPMod = pModSelect.value;
+
+            qModSelect.innerHTML = '';
+            pModSelect.innerHTML = '';
+
+            gameDatabase.modules.forEach(mod => {
+                const opt1 = document.createElement('option');
+                opt1.value = mod.id;
+                opt1.textContent = mod.title;
+                qModSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = mod.id;
+                opt2.textContent = mod.title;
+                pModSelect.appendChild(opt2);
+            });
+
+            if (prevQMod && gameDatabase.modules.some(m => m.id === prevQMod)) qModSelect.value = prevQMod;
+            if (prevPMod && gameDatabase.modules.some(m => m.id === prevPMod)) pModSelect.value = prevPMod;
+
+            populateAdminPhaseDropdown();
+        }
+
+        function onAdminModuleChange() {
+            resetQuestionForm();
+            populateAdminPhaseDropdown();
+            renderAdminQuestionsList();
+        }
+
+        function populateAdminPhaseDropdown() {
+            const modId = document.getElementById('admin-q-module').value;
+            const mod = getModuleById(modId);
+            const phaseSelect = document.getElementById('admin-q-phase');
+            const prevPhase = phaseSelect.value;
+
+            phaseSelect.innerHTML = '';
+            if (!mod) return;
+
+            mod.phases.forEach((_, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `Fasa ${idx + 1}`;
+                phaseSelect.appendChild(opt);
+            });
+
+            if (prevPhase !== '' && Number(prevPhase) < mod.phases.length) {
+                phaseSelect.value = prevPhase;
+            }
+        }
+
+        function toggleQuestionTypeFields() {
+            const type = document.getElementById('admin-q-type').value;
+            document.getElementById('fields-mcq').style.display = type === 'mcq' ? 'grid' : 'none';
+            document.getElementById('fields-drag').style.display = type === 'drag_drop' ? 'grid' : 'none';
+            document.getElementById('fields-affix').style.display = type === 'affix_builder' ? 'grid' : 'none';
+        }
+
+        function renderAdminQuestionsList() {
+            const modId = document.getElementById('admin-q-module').value;
+            const phaseIdx = Number(document.getElementById('admin-q-phase').value) || 0;
+            const mod = getModuleById(modId);
+            const listEl = document.getElementById('admin-q-list');
+            listEl.innerHTML = '';
+
+            if (!mod || !mod.phases[phaseIdx]) {
+                document.getElementById('admin-q-count').textContent = '0';
+                return;
+            }
+
+            const questions = mod.phases[phaseIdx];
+            document.getElementById('admin-q-count').textContent = questions.length;
+
+            const typeLabels = {
+                mcq: 'Aneka Pilihan',
+                drag_drop: 'Pengelasan / Monster Battle',
+                affix_builder: 'Pembina Imbuhan / Sliding'
+            };
+
+            questions.forEach((q, idx) => {
+                const item = document.createElement('div');
+                item.className = 'admin-item-card';
+                
+                let answerPreview = '';
+                if (q.type === 'mcq') {
+                    const correctOpt = q.options.find(o => o.correct);
+                    answerPreview = `Jawapan: ${correctOpt ? correctOpt.text : '-'}`;
+                } else if (q.type === 'drag_drop') {
+                    answerPreview = `Perkataan: "${q.word}" -> Kategori: ${q.category}`;
+                } else if (q.type === 'affix_builder') {
+                    answerPreview = `Imbuhan: "${q.correctAffix}" + ${q.rootWord}`;
+                }
+
+                item.innerHTML = `
+                    <div class="admin-item-info">
+                        <span class="admin-badge">#${idx + 1} • ${typeLabels[q.type] || q.type}</span>
+                        <div style="font-weight: 800; font-size: 0.92rem;">${q.question.replace(/\*\*/g, '')}</div>
+                        <div style="font-size: 0.8rem; color: #10B981; font-weight: 700; margin-top: 2px;">${answerPreview}</div>
+                    </div>
+                    <div class="admin-actions">
+                        <button class="btn-sm btn-edit" onclick="editAdminQuestion(${idx})"><i class="fa-solid fa-pen"></i> Edit</button>
+                        <button class="btn-sm btn-delete" onclick="deleteAdminQuestion(${idx})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        async function saveAdminQuestion() {
+            const modId = document.getElementById('admin-q-module').value;
+            const phaseIdx = Number(document.getElementById('admin-q-phase').value) || 0;
+            const editIdx = Number(document.getElementById('admin-q-edit-index').value);
+            const type = document.getElementById('admin-q-type').value;
+            const qText = document.getElementById('admin-q-text').value.trim();
+
+            if (!qText) {
+                showToast("Sila masukkan teks soalan!");
+                return;
+            }
+
+            let newQuestionObj = null;
+
+            if (type === 'mcq') {
+                const correct = document.getElementById('mcq-correct').value.trim();
+                const w1 = document.getElementById('mcq-wrong1').value.trim();
+                const w2 = document.getElementById('mcq-wrong2').value.trim();
+                const w3 = document.getElementById('mcq-wrong3').value.trim();
+
+                if (!correct || !w1) {
+                    showToast("Sila isi sekurang-kurangnya jawapan betul dan 1 pilihan salah!");
+                    return;
+                }
+
+                const options = [{ text: correct, correct: true }];
+                if (w1) options.push({ text: w1, correct: false });
+                if (w2) options.push({ text: w2, correct: false });
+                if (w3) options.push({ text: w3, correct: false });
+
+                newQuestionObj = { type: 'mcq', question: qText, options };
+            } else if (type === 'drag_drop') {
+                const word = document.getElementById('drag-word').value.trim();
+                const correctCat = document.getElementById('drag-correct-cat').value.trim();
+                const allCatsRaw = document.getElementById('drag-all-cats').value.trim();
+
+                if (!word || !correctCat || !allCatsRaw) {
+                    showToast("Sila lengkapkan semua medan Pengelasan Kata!");
+                    return;
+                }
+
+                const categories = allCatsRaw.split(',').map(s => s.trim()).filter(Boolean);
+                if (!categories.includes(correctCat)) categories.unshift(correctCat);
+
+                newQuestionObj = {
+                    type: 'drag_drop',
+                    question: qText,
+                    word,
+                    category: correctCat,
+                    categories
+                };
+            } else if (type === 'affix_builder') {
+                const rootWord = document.getElementById('affix-root').value.trim();
+                const correctAffix = document.getElementById('affix-correct').value.trim();
+                const optionsRaw = document.getElementById('affix-options').value.trim();
+
+                if (!rootWord || !correctAffix || !optionsRaw) {
+                    showToast("Sila lengkapkan semua medan Imbuhan!");
+                    return;
+                }
+
+                const affixOptions = optionsRaw.split(',').map(s => s.trim()).filter(Boolean);
+                if (!affixOptions.includes(correctAffix)) affixOptions.unshift(correctAffix);
+
+                newQuestionObj = {
+                    type: 'affix_builder',
+                    question: qText,
+                    rootWord,
+                    correctAffix,
+                    affixOptions
+                };
+            }
+
+            const mod = getModuleById(modId);
+            if (editIdx >= 0) {
+                mod.phases[phaseIdx][editIdx] = newQuestionObj;
+            } else {
+                mod.phases[phaseIdx].push(newQuestionObj);
+            }
+
+            await saveGameDatabase();
+            resetQuestionForm();
+            renderAdminQuestionsList();
+            renderAdminPhasesList();
+        }
+
+        function editAdminQuestion(idx) {
+            const modId = document.getElementById('admin-q-module').value;
+            const phaseIdx = Number(document.getElementById('admin-q-phase').value) || 0;
+            const mod = getModuleById(modId);
+            const q = mod.phases[phaseIdx][idx];
+            if (!q) return;
+
+            document.getElementById('admin-q-edit-index').value = idx;
+            document.getElementById('admin-q-form-title').textContent = `Edit Soalan #${idx + 1}`;
+            document.getElementById('admin-q-cancel-btn').style.display = 'inline-block';
+            document.getElementById('admin-q-type').value = q.type;
+            document.getElementById('admin-q-text').value = q.question;
+
+            toggleQuestionTypeFields();
+
+            if (q.type === 'mcq') {
+                const correctOpt = q.options.find(o => o.correct);
+                const wrongOpts = q.options.filter(o => !o.correct);
+                document.getElementById('mcq-correct').value = correctOpt ? correctOpt.text : '';
+                document.getElementById('mcq-wrong1').value = wrongOpts[0] ? wrongOpts[0].text : '';
+                document.getElementById('mcq-wrong2').value = wrongOpts[1] ? wrongOpts[1].text : '';
+                document.getElementById('mcq-wrong3').value = wrongOpts[2] ? wrongOpts[2].text : '';
+            } else if (q.type === 'drag_drop') {
+                document.getElementById('drag-word').value = q.word;
+                document.getElementById('drag-correct-cat').value = q.category;
+                document.getElementById('drag-all-cats').value = q.categories.join(', ');
+            } else if (q.type === 'affix_builder') {
+                document.getElementById('affix-root').value = q.rootWord;
+                document.getElementById('affix-correct').value = q.correctAffix;
+                document.getElementById('affix-options').value = q.affixOptions.join(', ');
+            }
+        }
+
+        async function deleteAdminQuestion(idx) {
+            const modId = document.getElementById('admin-q-module').value;
+            const phaseIdx = Number(document.getElementById('admin-q-phase').value) || 0;
+            const mod = getModuleById(modId);
+            
+            mod.phases[phaseIdx].splice(idx, 1);
+            await saveGameDatabase();
+            renderAdminQuestionsList();
+            renderAdminPhasesList();
+        }
+
+        function resetQuestionForm() {
+            document.getElementById('admin-q-edit-index').value = '-1';
+            document.getElementById('admin-q-form-title').textContent = '+ Tambah Soalan Baharu';
+            document.getElementById('admin-q-cancel-btn').style.display = 'none';
+            document.getElementById('admin-q-text').value = '';
+            document.getElementById('mcq-correct').value = '';
+            document.getElementById('mcq-wrong1').value = '';
+            document.getElementById('mcq-wrong2').value = '';
+            document.getElementById('mcq-wrong3').value = '';
+            document.getElementById('drag-word').value = '';
+            document.getElementById('drag-correct-cat').value = '';
+            document.getElementById('drag-all-cats').value = '';
+            document.getElementById('affix-root').value = '';
+            document.getElementById('affix-correct').value = '';
+            document.getElementById('affix-options').value = '';
+        }
+
+        /* URUS FASA */
+        function renderAdminPhasesList() {
+            const modId = document.getElementById('admin-p-module').value;
+            const mod = getModuleById(modId);
+            const listEl = document.getElementById('admin-p-list');
+            listEl.innerHTML = '';
+            if (!mod) return;
+
+            mod.phases.forEach((phaseQuestions, idx) => {
+                const item = document.createElement('div');
+                item.className = 'admin-item-card';
+                item.innerHTML = `
+                    <div class="admin-item-info">
+                        <strong style="color:var(--primary);">Fasa ${idx + 1}</strong>
+                        <span style="font-size:0.85rem; color:#64748B; margin-left:10px;">(${phaseQuestions.length} soalan)</span>
+                    </div>
+                    <div class="admin-actions">
+                        ${mod.phases.length > 1 ? `<button class="btn-sm btn-delete" onclick="deletePhaseFromModule(${idx})"><i class="fa-solid fa-trash"></i> Padam Fasa</button>` : ''}
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        async function addNewPhaseToModule() {
+            const modId = document.getElementById('admin-p-module').value;
+            const mod = getModuleById(modId);
+            if (!mod) return;
+
+            const newPhaseNum = mod.phases.length + 1;
+            mod.phases.push([
+                {
+                    type: 'mcq',
+                    question: `[Fasa ${newPhaseNum}] Contoh soalan baharu Tahun 5. Sila kemaskini di tab Urus Soalan:`,
+                    options: [
+                        { text: "Jawapan Betul", correct: true },
+                        { text: "Pilihan Salah 1", correct: false },
+                        { text: "Pilihan Salah 2", correct: false },
+                        { text: "Pilihan Salah 3", correct: false }
+                    ]
+                }
+            ]);
+
+            await saveGameDatabase();
+            populateAdminPhaseDropdown();
+            renderAdminPhasesList();
+            renderAdminModulesList();
+        }
+
+        async function deletePhaseFromModule(phaseIdx) {
+            const modId = document.getElementById('admin-p-module').value;
+            const mod = getModuleById(modId);
+            if (!mod || mod.phases.length <= 1) return;
+
+            mod.phases.splice(phaseIdx, 1);
+            await saveGameDatabase();
+            populateAdminPhaseDropdown();
+            renderAdminPhasesList();
+            renderAdminModulesList();
+        }
+
+        /* URUS MODUL */
+        function renderAdminModulesList() {
+            const listEl = document.getElementById('admin-m-list');
+            listEl.innerHTML = '';
+
+            gameDatabase.modules.forEach((mod, idx) => {
+                const modeMeta = GAME_MODES_META[idx % GAME_MODES_META.length];
+                const item = document.createElement('div');
+                item.className = 'admin-item-card';
+                item.innerHTML = `
+                    <div class="admin-item-info" style="display:flex; align-items:center; gap:12px;">
+                        <div class="menu-icon ${mod.colorClass}" style="width:40px; height:40px; font-size:1.1rem; background:var(--primary); flex-shrink:0;">
+                            <i class="fa-solid ${mod.icon}"></i>
+                        </div>
+                        <div>
+                            <strong style="font-size:1rem;">${mod.title}</strong>
+                            <div style="font-size:0.8rem; color:#64748B;">${mod.description} • <strong>${mod.phases.length} Fasa</strong> • Mod: <strong>${modeMeta.name}</strong></div>
+                        </div>
+                    </div>
+                    <div class="admin-actions">
+                        ${gameDatabase.modules.length > 1 ? `<button class="btn-sm btn-delete" onclick="deleteModule(${idx})"><i class="fa-solid fa-trash"></i> Padam</button>` : ''}
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        async function addNewModule() {
+            const title = document.getElementById('new-mod-title').value.trim();
+            const desc = document.getElementById('new-mod-desc').value.trim() || 'Modul Pembelajaran Tahun 5';
+            const icon = document.getElementById('new-mod-icon').value;
+            const colorClass = document.getElementById('new-mod-color').value;
+
+            if (!title) {
+                showToast("Sila masukkan nama modul baharu!");
+                return;
+            }
+
+            const newId = 'mod_t5_' + Date.now();
+            gameDatabase.modules.push({
+                id: newId,
+                title,
+                description: desc,
+                icon,
+                colorClass,
+                phases: [
+                    [
+                        {
+                            type: 'mcq',
+                            question: `Selamat datang ke Modul ${title} (Tahun 5)! Contoh soalan Fasa 1:`,
+                            options: [
+                                { text: "Jawapan Tepat", correct: true },
+                                { text: "Pilihan Salah A", correct: false },
+                                { text: "Pilihan Salah B", correct: false },
+                                { text: "Pilihan Salah C", correct: false }
+                            ]
+                        }
+                    ]
+                ]
+            });
+
+            document.getElementById('new-mod-title').value = '';
+            document.getElementById('new-mod-desc').value = '';
+
+            await saveGameDatabase();
+            populateAdminModuleDropdowns();
+            renderAdminModulesList();
+            renderAdminPhasesList();
+            renderAdminQuestionsList();
+        }
+
+        async function deleteModule(idx) {
+            if (gameDatabase.modules.length <= 1) return;
+            gameDatabase.modules.splice(idx, 1);
+            await saveGameDatabase();
+            populateAdminModuleDropdowns();
+            renderAdminModulesList();
+            renderAdminPhasesList();
+            renderAdminQuestionsList();
+        }
+
+        async function resetDatabaseToDefault() {
+            gameDatabase = JSON.parse(JSON.stringify(defaultGameData));
+            await saveGameDatabase();
+            populateAdminModuleDropdowns();
+            renderAdminModulesList();
+            renderAdminPhasesList();
+            renderAdminQuestionsList();
+            showToast("Semua modul & soalan Tahun 5 dikembalikan kepada asal!");
+        }
+
+        // Sokongan kawalan papan kekunci untuk Bomber Maze di Desktop
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('screen-game').classList.contains('active')) return;
+            if (!bomberState || bomberState.quizUnlocked) return;
+
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { e.preventDefault(); moveBomber(0, -1); }
+            else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { e.preventDefault(); moveBomber(0, 1); }
+            else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { e.preventDefault(); moveBomber(-1, 0); }
+            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { e.preventDefault(); moveBomber(1, 0); }
+            else if (e.key === ' ') { e.preventDefault(); placeBomberBomb(); }
+        });
+
+        // Jalankan permulaan apabila halaman dimuatkan
+        window.onload = function() {
+            initFirebaseRealtimeSync();
+            renderModuleMenu();
+            if (currentUser && currentUser.name && currentUser.name !== "Murid BM 5") {
+                document.getElementById('user-name-display').textContent = currentUser.name;
+                document.getElementById('user-avatar-display').innerHTML = `<i class="fa-solid ${currentUser.avatar}"></i>`;
+                document.getElementById('main-header').style.display = 'flex';
+                showScreen('screen-menu');
+            } else {
+                showScreen('screen-auth');
+            }
+        };
+    </script>
+</body>
+</html>
